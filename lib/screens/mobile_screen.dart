@@ -11,26 +11,35 @@ class MobileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Mobile Layout'),
-      ),
-      body: Center(
-        child: Text('This is the mobile layout'),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle),
-            label: 'Profile',
+        title: Text('Flutter Theme Demo for Mobile'),
+        actions: [
+          Switch(
+            value: isDarkMode,
+            onChanged: toggleTheme,
+            activeColor: Colors.blue,
           ),
         ],
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: FlutterLogo(size: 80), // Smaller logo for mobile
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextFormField(
+                decoration: InputDecoration(
+                  labelText: 'Search',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.search),
+                ),
+              ),
+            ),
+            // Footer(),
+          ],
+        ),
       ),
     );
   }
