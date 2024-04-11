@@ -15,9 +15,9 @@ final ThemeData darkTheme = ThemeData(
   brightness: Brightness.dark,
   primaryColor: Colors.blue,
   colorScheme: ColorScheme.dark(
-    background: Colors.black,
+    background: Colors.black87,
     primary: Colors.blue,
     brightness: Brightness.dark,
   ),
-  scaffoldBackgroundColor: Colors.black,
+  scaffoldBackgroundColor: Colors.black87,
 );
