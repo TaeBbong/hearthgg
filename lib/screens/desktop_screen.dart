@@ -16,7 +16,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Flutter Theme Demo'),
+        title: Text('HearthGG.web.app'),
         actions: [
           Switch(
             value: widget.isDarkMode,
@@ -29,7 +29,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: FlutterLogo(size: 100),
+            child: Image.asset('images/main.png', width: 240),
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),

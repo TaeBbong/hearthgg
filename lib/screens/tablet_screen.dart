@@ -25,26 +25,56 @@ class _TabletScreenState extends State<TabletScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: FlutterLogo(size: 120), // Slightly larger logo for tablet
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: TextFormField(
-                decoration: InputDecoration(
-                  labelText: 'Search',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.search),
-                ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Image.asset('images/main.png', width: 120)),
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: TextFormField(
+                      decoration: InputDecoration(
+                        labelText: 'Search',
+                        border: OutlineInputBorder(),
+                        suffixIcon: Icon(Icons.search),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            // Footer(),
-          ],
-        ),
+          ),
+          Footer(),
+        ],
+      ),
+    );
+  }
+}
+
+class Footer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(20),
+      color: Theme.of(context)
+          .primaryColor
+          .withOpacity(0.1), // Slight primary color tint
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '© 2024 My Website',
+            style: TextStyle(
+              fontSize: 16,
+              color:
+                  Theme.of(context).primaryColor, // Use primary color for text
+            ),
+          ),
+        ],
       ),
     );
   }
