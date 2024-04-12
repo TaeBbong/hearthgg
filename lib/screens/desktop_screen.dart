@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/area.dart';
 
 class DesktopScreen extends StatefulWidget {
   final bool isDarkMode;
@@ -12,11 +13,18 @@ class DesktopScreen extends StatefulWidget {
 }
 
 class _DesktopScreenState extends State<DesktopScreen> {
+  String area = '아시아태평양';
+  TextEditingController battleTagController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('HearthGG.web.app'),
+        title: InkWell(
+          child: const Text('HearthGG.web.app'),
+          onTap: () {},
+        ),
+        centerTitle: false,
         actions: [
           Switch(
             value: widget.isDarkMode,
@@ -31,14 +39,42 @@ class _DesktopScreenState extends State<DesktopScreen> {
             padding: const EdgeInsets.all(8.0),
             child: Image.asset('images/main.png', width: 240),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextFormField(
-              decoration: InputDecoration(
-                labelText: 'Search',
-                border: OutlineInputBorder(),
-                suffixIcon: Icon(Icons.search),
-              ),
+          SizedBox(
+            width: MediaQuery.of(context).size.width * 0.4,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.1,
+                  child: DropdownMenu<String>(
+                    initialSelection: areas.keys.first,
+                    onSelected: (String? value) {
+                      setState(() {
+                        area = value!;
+                      });
+                    },
+                    dropdownMenuEntries: areas.keys
+                        .toList()
+                        .map<DropdownMenuEntry<String>>((String value) {
+                      return DropdownMenuEntry<String>(
+                        value: value,
+                        label: value,
+                      );
+                    }).toList(),
+                  ),
+                ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.3,
+                  child: TextFormField(
+                    controller: battleTagController,
+                    decoration: const InputDecoration(
+                      labelText: '배틀태그를 입력하세요. (ex: Flurry)',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.search),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -62,7 +98,7 @@ class Footer extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            '© 2024 My Website',
+            'TaeBbong © 2024 My Website',
             style: TextStyle(
               fontSize: 16,
               color:
