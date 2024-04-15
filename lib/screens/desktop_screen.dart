@@ -19,7 +19,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
   void performSearch() {
     print('Searching for: ${battleTagController.text} with option: $area');
     String query = '?id=${battleTagController.text}&area=$area';
-    Navigator.pushNamed(context, '/results', arguments: query);
+    // Navigator.pushNamed(context, '/results', arguments: query);
   }
 
   @override

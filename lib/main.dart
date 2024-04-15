@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 import 'screens/home_screen.dart';
@@ -10,7 +11,7 @@ import 'widgets/responsive_layout.dart';
 import 'constants/theme.dart';
 
 void main() {
-  setUrlStrategy(PathUrlStrategy());
+  usePathUrlStrategy();
   runApp(const MainApp());
 }
 
@@ -35,26 +36,22 @@ class _MainAppState extends State<MainApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: _isDarkMode ? darkTheme : lightTheme,
-      initialRoute: '/',
-      routes: {
-        '/': (context) =>
-            HomeScreen(isDarkMode: _isDarkMode, toggleTheme: toggleTheme),
-        '/results': (context) => ResultScreen(),
-      },
-      // home: ResponsiveLayout(
-      //   mobileLayout: MobileScreen(
-      //     isDarkMode: _isDarkMode,
-      //     toggleTheme: toggleTheme,
-      //   ),
-      //   tabletLayout: TabletScreen(
-      //     isDarkMode: _isDarkMode,
-      //     toggleTheme: toggleTheme,
-      //   ),
-      //   desktopLayout: DesktopScreen(
-      //     isDarkMode: _isDarkMode,
-      //     toggleTheme: toggleTheme,
-      //   ),
-      // ),
-    );
+      home: ResponsiveLayout(
+        mobileLayout: MobileScreen(
+          isDarkMode: _isDarkMode,
+          toggleTheme: toggleTheme,
+        ),
+        tabletLayout: TabletScreen(
+          isDarkMode: _isDarkMode,
+          toggleTheme: toggleTheme,
+        ),
+        desktopLayout: DesktopScreen(
+          isDarkMode: _isDarkMode,
+          toggleTheme: toggleTheme,
+        ),
+      ),
+    ).animate().fadeIn(
+          duration: 400.ms,
+        );
   }
 }
