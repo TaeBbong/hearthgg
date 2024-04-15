@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../constants/area.dart';
 
 class DesktopScreen extends StatefulWidget {
@@ -15,11 +18,28 @@ class DesktopScreen extends StatefulWidget {
 class _DesktopScreenState extends State<DesktopScreen> {
   String area = '아시아태평양';
   TextEditingController battleTagController = TextEditingController();
+  bool isSearching = false;
+  bool isResult = false;
+  Map<String, dynamic> searchResult = {'status': false};
 
-  void performSearch() {
-    print('Searching for: ${battleTagController.text} with option: $area');
-    String query = '?id=${battleTagController.text}&area=$area';
-    // Navigator.pushNamed(context, '/results', arguments: query);
+  Future<Map<String, dynamic>> performSearch() async {
+    String areaCode = areas[area]!;
+    String id = battleTagController.text;
+    String searchUrl = '';
+    // TODO: HardCoded pagesize
+    for (int i = 1; i <= 3190; i += 1) {
+      print('Searching page $i');
+      searchUrl =
+          'https://corsproxy.io/?https://hearthstone.blizzard.com/ko-kr/api/community/leaderboardsData?region=$areaCode&leaderboardId=arena&page=${i}&seasonId=44';
+      var result = await http.get(Uri.parse(searchUrl));
+      for (var row in jsonDecode(result.body)['leaderboard']['rows']) {
+        if (row['accountid'] == id) {
+          print('match! ${row['rank']} ${row['rating']}');
+          return {'status': true, 'rank': row['rank'], 'rating': row['rating']};
+        }
+      }
+    }
+    return {'status': false};
   }
 
   @override
@@ -27,7 +47,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
     return Scaffold(
       appBar: AppBar(
         title: InkWell(
-          child: const Text('HearthGG.web.app'),
+          child: const Text('투기장 등수 검색 HearthGG.web.app'),
           onTap: () {},
         ),
         centerTitle: false,
@@ -89,13 +109,35 @@ class _DesktopScreenState extends State<DesktopScreen> {
                 ),
                 IconButton(
                   icon: Icon(Icons.search),
-                  onPressed: () {
-                    performSearch();
+                  onPressed: () async {
+                    setState(() {
+                      isSearching = true;
+                    });
+                    await performSearch().then((result) {
+                      setState(() {
+                        isSearching = false;
+                        if (result['status']) {
+                          isResult = true;
+                        }
+                      });
+                    });
                   },
                 ),
               ],
             ),
           ),
+          isSearching
+              ? Container(
+                  padding: EdgeInsets.all(15),
+                  height: 150,
+                  width: 150,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 15,
+                  ),
+                )
+              : isResult
+                  ? Text('result')
+                  : Container(),
           Expanded(
               child: Container()), // Use expanded to push footer to the bottom
           Footer(),
