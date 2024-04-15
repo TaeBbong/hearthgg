@@ -16,6 +16,12 @@ class _DesktopScreenState extends State<DesktopScreen> {
   String area = '아시아태평양';
   TextEditingController battleTagController = TextEditingController();
 
+  void performSearch() {
+    print('Searching for: ${battleTagController.text} with option: $area');
+    String query = '?id=${battleTagController.text}&area=$area';
+    Navigator.pushNamed(context, '/results', arguments: query);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,37 +48,50 @@ class _DesktopScreenState extends State<DesktopScreen> {
           SizedBox(
             width: MediaQuery.of(context).size.width * 0.4,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.1,
-                  child: DropdownMenu<String>(
-                    initialSelection: areas.keys.first,
-                    onSelected: (String? value) {
-                      setState(() {
-                        area = value!;
-                      });
-                    },
-                    dropdownMenuEntries: areas.keys
-                        .toList()
-                        .map<DropdownMenuEntry<String>>((String value) {
-                      return DropdownMenuEntry<String>(
-                        value: value,
-                        label: value,
-                      );
-                    }).toList(),
-                  ),
-                ),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.3,
-                  child: TextFormField(
-                    controller: battleTagController,
-                    decoration: const InputDecoration(
-                      labelText: '배틀태그를 입력하세요. (ex: Flurry)',
-                      border: OutlineInputBorder(),
-                      suffixIcon: Icon(Icons.search),
+              children: <Widget>[
+                Expanded(
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButtonFormField<String>(
+                      value: area,
+                      items: areas.keys
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          area = newValue!;
+                        });
+                      },
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey, width: 1),
+                        ),
+                        border: OutlineInputBorder(),
+                        filled: false,
+                      ),
                     ),
                   ),
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    controller: battleTagController,
+                    decoration: InputDecoration(
+                      hintText: '배틀태그를 입력하세요. (ex: Flurry)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.search),
+                  onPressed: () {
+                    performSearch();
+                  },
                 ),
               ],
             ),
