@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:hearth_arena_rank_web/widgets/card.dart';
 import 'package:http/http.dart' as http;
 import '../constants/area.dart';
 
@@ -25,19 +26,19 @@ class _DesktopScreenState extends State<DesktopScreen> {
   Future<Map<String, dynamic>> performSearch() async {
     String areaCode = areas[area]!;
     String id = battleTagController.text;
-    String searchUrl = '';
-    // TODO: HardCoded pagesize
-    for (int i = 1; i <= 3190; i += 1) {
-      print('Searching page $i');
-      searchUrl =
-          'https://corsproxy.io/?https://hearthstone.blizzard.com/ko-kr/api/community/leaderboardsData?region=$areaCode&leaderboardId=arena&page=${i}&seasonId=44';
-      var result = await http.get(Uri.parse(searchUrl));
-      for (var row in jsonDecode(result.body)['leaderboard']['rows']) {
-        if (row['accountid'] == id) {
-          print('match! ${row['rank']} ${row['rating']}');
-          return {'status': true, 'rank': row['rank'], 'rating': row['rating']};
-        }
-      }
+    String searchUrl =
+        'https://corsproxy.io/?https://hearth-arena-rank-be.fly.dev/search?seasonid=45&area=$areaCode&accountid=${Uri.encodeComponent(id)}';
+    print(Uri.parse(searchUrl));
+    var result = await http.get(Uri.parse(searchUrl));
+    var parsed = jsonDecode(result.body);
+    print(parsed);
+    if (parsed.containsKey("rank")) {
+      return {
+        'status': true,
+        'accountid': parsed['accountid'],
+        'rank': parsed['rank'],
+        'rating': parsed['rating']
+      };
     }
     return {'status': false};
   }
@@ -112,12 +113,15 @@ class _DesktopScreenState extends State<DesktopScreen> {
                   onPressed: () async {
                     setState(() {
                       isSearching = true;
+                      searchResult = {'status': false};
+                      isResult = false;
                     });
                     await performSearch().then((result) {
                       setState(() {
                         isSearching = false;
                         if (result['status']) {
                           isResult = true;
+                          searchResult = result;
                         }
                       });
                     });
@@ -136,7 +140,9 @@ class _DesktopScreenState extends State<DesktopScreen> {
                   ),
                 )
               : isResult
-                  ? Text('result')
+                  ? SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.4,
+                      child: RankCard(rankData: searchResult))
                   : Container(),
           Expanded(
               child: Container()), // Use expanded to push footer to the bottom
