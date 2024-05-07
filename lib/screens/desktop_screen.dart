@@ -27,7 +27,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
     String areaCode = areas[area]!;
     String id = battleTagController.text;
     String searchUrl =
-        'https://corsproxy.io/?https://hearth-arena-rank-be.fly.dev/search?seasonid=45&area=$areaCode&accountid=${Uri.encodeComponent(id)}';
+        'https://hearth-arena-rank-be.fly.dev/search?seasonid=45&area=$areaCode&accountid=$id';
     print(Uri.parse(searchUrl));
     var result = await http.get(Uri.parse(searchUrl));
     var parsed = jsonDecode(result.body);
