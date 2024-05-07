@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:hearth_arena_rank_web/env.dart';
 import 'package:hearth_arena_rank_web/widgets/card.dart';
 import 'package:http/http.dart' as http;
 import '../constants/area.dart';
@@ -26,12 +27,12 @@ class _DesktopScreenState extends State<DesktopScreen> {
   Future<Map<String, dynamic>> performSearch() async {
     String areaCode = areas[area]!;
     String id = battleTagController.text;
-    String searchUrl =
-        'https://hearth-arena-rank-be.fly.dev/search?seasonid=45&area=$areaCode&accountid=$id';
-    print(Uri.parse(searchUrl));
+    String searchParams = 'seasonid=45&area=$areaCode&accountid=$id';
+    String searchUrl = Env.apiUrl + searchParams;
+
     var result = await http.get(Uri.parse(searchUrl));
     var parsed = jsonDecode(result.body);
-    print(parsed);
+
     if (parsed.containsKey("rank")) {
       return {
         'status': true,

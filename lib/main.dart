@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
-import 'screens/home_screen.dart';
 import 'screens/mobile_screen.dart';
 import 'screens/desktop_screen.dart';
-import 'screens/result_screen.dart';
+
 import 'screens/tablet_screen.dart';
 import 'widgets/responsive_layout.dart';
 import 'constants/theme.dart';

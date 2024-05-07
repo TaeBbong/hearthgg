@@ -1,3 +1,6 @@
+# Env
+lib/env.dart
+
 # Build
 android
 android/*
