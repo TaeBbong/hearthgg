@@ -1,10 +1,8 @@
-import 'dart:convert';
-import 'dart:html' as html;
-
 import 'package:flutter/material.dart';
-import 'package:hearth_arena_rank_web/env.dart';
-import 'package:hearth_arena_rank_web/widgets/card.dart';
-import 'package:http/http.dart' as http;
+
+import '../services/search.dart';
+import '../widgets/card.dart';
+import '../widgets/footer.dart';
 import '../constants/area.dart';
 
 class DesktopScreen extends StatefulWidget {
@@ -21,29 +19,10 @@ class DesktopScreen extends StatefulWidget {
 class _DesktopScreenState extends State<DesktopScreen> {
   String area = '아시아태평양';
   TextEditingController battleTagController = TextEditingController();
+  SearchService service = SearchService();
   bool isSearching = false;
   bool isResult = false;
   Map<String, dynamic> searchResult = {'status': false};
-
-  Future<Map<String, dynamic>> performSearch() async {
-    String areaCode = areas[area]!;
-    String id = battleTagController.text;
-    String searchParams = 'seasonid=45&area=$areaCode&accountid=$id';
-    String searchUrl = Env.apiUrl + searchParams;
-
-    var result = await http.get(Uri.parse(searchUrl));
-    var parsed = jsonDecode(result.body);
-
-    if (parsed.containsKey("rank")) {
-      return {
-        'status': true,
-        'accountid': parsed['accountid'],
-        'rank': parsed['rank'],
-        'rating': parsed['rating']
-      };
-    }
-    return {'status': false};
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +89,11 @@ class _DesktopScreenState extends State<DesktopScreen> {
                         searchResult = {'status': false};
                         isResult = false;
                       });
-                      await performSearch().then((result) {
+                      await service
+                          .performSearch(
+                              areaCode: areas[area]!,
+                              id: battleTagController.text)
+                          .then((result) {
                         setState(() {
                           isSearching = false;
                           if (result['status']) {
@@ -134,7 +117,11 @@ class _DesktopScreenState extends State<DesktopScreen> {
                       searchResult = {'status': false};
                       isResult = false;
                     });
-                    await performSearch().then((result) {
+                    await service
+                        .performSearch(
+                            areaCode: areas[area]!,
+                            id: battleTagController.text)
+                        .then((result) {
                       setState(() {
                         isSearching = false;
                         if (result['status']) {
@@ -165,36 +152,6 @@ class _DesktopScreenState extends State<DesktopScreen> {
           Expanded(
               child: Container()), // Use expanded to push footer to the bottom
           Footer(),
-        ],
-      ),
-    );
-  }
-}
-
-class Footer extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      color: Theme.of(context)
-          .primaryColor
-          .withOpacity(0.1), // Slight primary color tint
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          InkWell(
-            onTap: () {
-              html.window.open('https://github.com/TaeBbong', 'TaeBbong');
-            },
-            child: Text(
-              'TaeBbong © 2024 hearthgg.web.app',
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context)
-                    .primaryColor, // Use primary color for text
-              ),
-            ),
-          ),
         ],
       ),
     );

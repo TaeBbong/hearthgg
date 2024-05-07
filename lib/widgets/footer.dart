@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:html' as html;
 
 class Footer extends StatelessWidget {
   @override
@@ -11,12 +12,17 @@ class Footer extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            '© 2024 My Website',
-            style: TextStyle(
-              fontSize: 16,
-              color:
-                  Theme.of(context).primaryColor, // Use primary color for text
+          InkWell(
+            onTap: () {
+              html.window.open('https://github.com/TaeBbong', 'TaeBbong');
+            },
+            child: Text(
+              'TaeBbong © 2024 hearthgg.web.app',
+              style: TextStyle(
+                fontSize: 16,
+                color: Theme.of(context)
+                    .primaryColor, // Use primary color for text
+              ),
             ),
           ),
         ],
