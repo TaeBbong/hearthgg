@@ -103,6 +103,22 @@ class _DesktopScreenState extends State<DesktopScreen> {
                   flex: 2,
                   child: TextFormField(
                     controller: battleTagController,
+                    onFieldSubmitted: (_) async {
+                      setState(() {
+                        isSearching = true;
+                        searchResult = {'status': false};
+                        isResult = false;
+                      });
+                      await performSearch().then((result) {
+                        setState(() {
+                          isSearching = false;
+                          if (result['status']) {
+                            isResult = true;
+                            searchResult = result;
+                          }
+                        });
+                      });
+                    },
                     decoration: InputDecoration(
                       hintText: '배틀태그를 입력하세요. (ex: Flurry)',
                       border: OutlineInputBorder(),
