@@ -1,3 +1,8 @@
+# Deploy
+.firebase/
+.firebaserc
+firebase.json
+
 # Env
 lib/env.dart
 
