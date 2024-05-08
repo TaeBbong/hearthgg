@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   flutter_animate:
   http:
+  firebase_analytics_web:
+  firebase_core:
 
 dev_dependencies:
   flutter_test:

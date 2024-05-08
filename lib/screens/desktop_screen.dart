@@ -1,3 +1,4 @@
+import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:flutter/material.dart';
 
 import '../services/search.dart';
@@ -8,9 +9,13 @@ import '../constants/area.dart';
 class DesktopScreen extends StatefulWidget {
   final bool isDarkMode;
   final Function(bool) toggleTheme;
+  final FirebaseAnalyticsWeb analytics;
 
   const DesktopScreen(
-      {super.key, required this.isDarkMode, required this.toggleTheme});
+      {super.key,
+      required this.isDarkMode,
+      required this.toggleTheme,
+      required this.analytics});
 
   @override
   _DesktopScreenState createState() => _DesktopScreenState();
@@ -84,6 +89,8 @@ class _DesktopScreenState extends State<DesktopScreen> {
                   child: TextFormField(
                     controller: battleTagController,
                     onFieldSubmitted: (_) async {
+                      await widget.analytics
+                          .logEvent(name: '[+] Search Event with EnterKey');
                       setState(() {
                         isSearching = true;
                         searchResult = {'status': false};
@@ -112,6 +119,8 @@ class _DesktopScreenState extends State<DesktopScreen> {
                 IconButton(
                   icon: Icon(Icons.search),
                   onPressed: () async {
+                    await widget.analytics
+                        .logEvent(name: '[+] Search Event with Button');
                     setState(() {
                       isSearching = true;
                       searchResult = {'status': false};
