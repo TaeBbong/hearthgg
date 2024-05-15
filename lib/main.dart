@@ -50,9 +50,10 @@ class _MainAppState extends State<MainApp> {
           toggleTheme: toggleTheme,
           analytics: analytics,
         ),
-        tabletLayout: TabletScreen(
+        tabletLayout: MobileScreen(
           isDarkMode: _isDarkMode,
           toggleTheme: toggleTheme,
+          analytics: analytics,
         ),
         desktopLayout: DesktopScreen(
           isDarkMode: _isDarkMode,
