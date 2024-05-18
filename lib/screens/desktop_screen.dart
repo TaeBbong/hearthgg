@@ -51,9 +51,8 @@ class _DesktopScreenState extends State<DesktopScreen> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Image.asset('images/main.png', width: 240),
+          const Padding(
+            padding: EdgeInsets.all(20.0),
           ),
           SizedBox(
             width: MediaQuery.of(context).size.width * 0.4,
@@ -95,8 +94,9 @@ class _DesktopScreenState extends State<DesktopScreen> {
                   child: TextFormField(
                     controller: battleTagController,
                     onFieldSubmitted: (_) async {
-                      await widget.analytics
-                          .logEvent(name: '[+] Search Event with EnterKey');
+                      await widget.analytics.logEvent(
+                          name:
+                              '[+] Search Event with EnterKey ${battleTagController.text}');
                       setState(() {
                         isSearching = true;
                         searchResult = {'status': false};
@@ -125,8 +125,9 @@ class _DesktopScreenState extends State<DesktopScreen> {
                 IconButton(
                   icon: Icon(Icons.search),
                   onPressed: () async {
-                    await widget.analytics
-                        .logEvent(name: '[+] Search Event with Button');
+                    await widget.analytics.logEvent(
+                        name:
+                            '[+] Search Event with Button ${battleTagController.text}');
                     setState(() {
                       isSearching = true;
                       searchResult = {'status': false};

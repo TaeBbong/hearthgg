@@ -33,7 +33,10 @@ class _MobileScreenState extends State<MobileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('투기장 등수 검색 HearthGG.web.app'),
+        title: Image.asset(
+          'images/logo_trans.png',
+          height: 80,
+        ),
         actions: [
           Switch(
             value: widget.isDarkMode,
@@ -48,10 +51,6 @@ class _MobileScreenState extends State<MobileScreen> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Image.asset('images/main.png', width: 200),
-                  ),
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
@@ -95,7 +94,8 @@ class _MobileScreenState extends State<MobileScreen> {
                             controller: battleTagController,
                             onFieldSubmitted: (_) async {
                               await widget.analytics.logEvent(
-                                  name: '[+] Search Event with EnterKey');
+                                  name:
+                                      '[+] Search Event with EnterKey ${battleTagController.text}');
                               setState(() {
                                 isSearching = true;
                                 searchResult = {'status': false};
@@ -124,7 +124,8 @@ class _MobileScreenState extends State<MobileScreen> {
                                 icon: Icon(Icons.search),
                                 onPressed: () async {
                                   await widget.analytics.logEvent(
-                                      name: '[+] Search Event with Button');
+                                      name:
+                                          '[+] Search Event with Button ${battleTagController.text}');
                                   setState(() {
                                     isSearching = true;
                                     searchResult = {'status': false};

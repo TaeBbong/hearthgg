@@ -22,7 +22,7 @@ class RankCard extends StatelessWidget {
               leading: CircleAvatar(
                 child:
                     Text(rankData['accountid'].substring(0, 1).toUpperCase()),
-                backgroundColor: Colors.blue,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
               ),
               title: Text(rankData['accountid'],
