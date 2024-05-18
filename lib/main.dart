@@ -8,7 +8,6 @@ import 'firebase_options.dart';
 import 'screens/mobile_screen.dart';
 import 'screens/desktop_screen.dart';
 
-import 'screens/tablet_screen.dart';
 import 'widgets/responsive_layout.dart';
 import 'constants/theme.dart';
 

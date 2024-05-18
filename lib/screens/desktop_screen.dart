@@ -34,7 +34,10 @@ class _DesktopScreenState extends State<DesktopScreen> {
     return Scaffold(
       appBar: AppBar(
         title: InkWell(
-          child: const Text('투기장 등수 검색 HearthGG.web.app'),
+          child: Image.asset(
+            'images/logo_trans.png',
+            height: 80,
+          ),
           onTap: () {},
         ),
         centerTitle: false,
@@ -64,7 +67,10 @@ class _DesktopScreenState extends State<DesktopScreen> {
                           .map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
-                          child: Text(value),
+                          child: Text(
+                            value,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                         );
                       }).toList(),
                       onChanged: (String? newValue) {
@@ -146,20 +152,20 @@ class _DesktopScreenState extends State<DesktopScreen> {
           ),
           isSearching
               ? Container(
-                  padding: EdgeInsets.all(15),
+                  padding: const EdgeInsets.all(15),
                   height: 150,
                   width: 150,
-                  child: CircularProgressIndicator(
+                  child: const CircularProgressIndicator(
                     strokeWidth: 15,
                   ),
                 )
               : isResult
                   ? SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.4,
-                      child: RankCard(rankData: searchResult))
+                      width: MediaQuery.of(context).size.width * 0.41,
+                      child: RankCard(rankData: searchResult),
+                    )
                   : Container(),
-          Expanded(
-              child: Container()), // Use expanded to push footer to the bottom
+          Expanded(child: Container()),
           Footer(),
         ],
       ),
