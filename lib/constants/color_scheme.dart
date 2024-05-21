@@ -1,5 +1,15 @@
 import 'package:flutter/material.dart';
 
+final newLightColor = ColorScheme.fromSeed(
+  seedColor: Color(0xff000e27),
+  brightness: Brightness.light,
+);
+
+final newDarkColor = ColorScheme.fromSeed(
+  seedColor: Color(0xff000e27),
+  brightness: Brightness.dark,
+);
+
 const lightColor = ColorScheme.light(
   background: Colors.white,
   primary: Color(0xff000e27),

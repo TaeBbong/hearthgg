@@ -4,12 +4,12 @@ import '../constants/text_styles.dart';
 
 final ThemeData lightTheme = ThemeData(
   brightness: Brightness.light,
-  colorScheme: lightColor,
+  colorScheme: newLightColor,
   textTheme: lightTextTheme,
 );
 
 final ThemeData darkTheme = ThemeData(
   brightness: Brightness.dark,
-  colorScheme: darkColor,
+  colorScheme: newDarkColor,
   textTheme: darkTextTheme,
 );
