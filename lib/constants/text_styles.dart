@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 const TextTheme lightTextTheme = TextTheme(
-  titleLarge: TextStyle(fontSize: 22, fontFamily: 'Pretendard'),
+  titleLarge: TextStyle(
+      fontSize: 45, fontFamily: 'Queensides', fontWeight: FontWeight.bold),
   bodyLarge: TextStyle(fontSize: 18, fontFamily: 'Pretendard'),
   bodyMedium: TextStyle(
     fontSize: 16,
@@ -12,7 +13,8 @@ const TextTheme lightTextTheme = TextTheme(
 );
 
 const TextTheme darkTextTheme = TextTheme(
-  titleLarge: TextStyle(fontSize: 22, fontFamily: 'Pretendard'),
+  titleLarge: TextStyle(
+      fontSize: 45, fontFamily: 'Queensides', fontWeight: FontWeight.bold),
   bodyLarge: TextStyle(fontSize: 18, fontFamily: 'Pretendard'),
   bodyMedium: TextStyle(
     fontSize: 16,

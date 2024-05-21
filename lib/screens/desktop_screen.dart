@@ -34,10 +34,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
     return Scaffold(
       appBar: AppBar(
         title: InkWell(
-          child: Image.asset(
-            'images/logo_trans.png',
-            height: 80,
-          ),
+          child: Text('Hearth.gg'),
           onTap: () {},
         ),
         centerTitle: false,

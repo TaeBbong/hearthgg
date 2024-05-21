@@ -33,10 +33,7 @@ class _MobileScreenState extends State<MobileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Image.asset(
-          'images/logo_trans.png',
-          height: 80,
-        ),
+        title: Text('Hearth.gg'),
         actions: [
           Switch(
             value: widget.isDarkMode,
