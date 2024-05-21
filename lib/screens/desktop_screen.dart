@@ -2,7 +2,7 @@ import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:flutter/material.dart';
 
 import '../services/search.dart';
-import '../widgets/card.dart';
+import '../widgets/rank_card.dart';
 import '../widgets/footer.dart';
 import '../constants/area.dart';
 
