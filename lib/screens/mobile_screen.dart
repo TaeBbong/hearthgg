@@ -1,7 +1,7 @@
 import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:flutter/material.dart';
-import 'package:hearth_arena_rank_web/constants/area.dart';
-import 'package:hearth_arena_rank_web/widgets/card.dart';
+import '../constants/area.dart';
+import '../widgets/rank_card.dart';
 
 import '../widgets/footer.dart';
 import '../services/search.dart';
@@ -22,7 +22,7 @@ class MobileScreen extends StatefulWidget {
 }
 
 class _MobileScreenState extends State<MobileScreen> {
-  String area = '아시아태평양';
+  AreaLabel area = AreaLabel.ap;
   TextEditingController battleTagController = TextEditingController();
   SearchService service = SearchService();
   bool isSearching = false;
@@ -57,19 +57,20 @@ class _MobileScreenState extends State<MobileScreen> {
                       children: [
                         Expanded(
                           child: DropdownButtonHideUnderline(
-                            child: DropdownButtonFormField<String>(
+                            child: DropdownButtonFormField<AreaLabel>(
                               value: area,
-                              items: areas.keys.map<DropdownMenuItem<String>>(
-                                  (String value) {
-                                return DropdownMenuItem<String>(
+                              items: AreaLabel.values
+                                  .map<DropdownMenuItem<AreaLabel>>(
+                                      (AreaLabel value) {
+                                return DropdownMenuItem<AreaLabel>(
                                   value: value,
                                   child: Text(
-                                    value,
+                                    value.text,
                                     style: TextStyle(fontSize: 12),
                                   ),
                                 );
                               }).toList(),
-                              onChanged: (String? newValue) {
+                              onChanged: (AreaLabel? newValue) {
                                 setState(() {
                                   area = newValue!;
                                 });
@@ -103,7 +104,7 @@ class _MobileScreenState extends State<MobileScreen> {
                               });
                               await service
                                   .performSearch(
-                                      areaCode: areas[area]!,
+                                      areaCode: area.code,
                                       id: battleTagController.text)
                                   .then((result) {
                                 setState(() {
@@ -133,7 +134,7 @@ class _MobileScreenState extends State<MobileScreen> {
                                   });
                                   await service
                                       .performSearch(
-                                          areaCode: areas[area]!,
+                                          areaCode: area.code,
                                           id: battleTagController.text)
                                       .then((result) {
                                     setState(() {

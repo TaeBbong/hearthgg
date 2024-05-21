@@ -2,7 +2,7 @@ import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:flutter/material.dart';
 
 import '../services/search.dart';
-import '../widgets/card.dart';
+import '../widgets/rank_card.dart';
 import '../widgets/footer.dart';
 import '../constants/area.dart';
 
@@ -22,7 +22,7 @@ class DesktopScreen extends StatefulWidget {
 }
 
 class _DesktopScreenState extends State<DesktopScreen> {
-  String area = '아시아태평양';
+  AreaLabel area = AreaLabel.ap;
   TextEditingController battleTagController = TextEditingController();
   SearchService service = SearchService();
   bool isSearching = false;
@@ -60,19 +60,19 @@ class _DesktopScreenState extends State<DesktopScreen> {
               children: <Widget>[
                 Expanded(
                   child: DropdownButtonHideUnderline(
-                    child: DropdownButtonFormField<String>(
+                    child: DropdownButtonFormField<AreaLabel>(
                       value: area,
-                      items: areas.keys
-                          .map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
+                      items: AreaLabel.values
+                          .map<DropdownMenuItem<AreaLabel>>((AreaLabel value) {
+                        return DropdownMenuItem<AreaLabel>(
                           value: value,
                           child: Text(
-                            value,
+                            value.text,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         );
                       }).toList(),
-                      onChanged: (String? newValue) {
+                      onChanged: (AreaLabel? newValue) {
                         setState(() {
                           area = newValue!;
                         });
@@ -104,8 +104,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
                       });
                       await service
                           .performSearch(
-                              areaCode: areas[area]!,
-                              id: battleTagController.text)
+                              areaCode: area.code, id: battleTagController.text)
                           .then((result) {
                         setState(() {
                           isSearching = false;
@@ -135,8 +134,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
                     });
                     await service
                         .performSearch(
-                            areaCode: areas[area]!,
-                            id: battleTagController.text)
+                            areaCode: area.code, id: battleTagController.text)
                         .then((result) {
                       setState(() {
                         isSearching = false;
