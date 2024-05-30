@@ -15,6 +15,7 @@ dependencies:
   http:
   firebase_analytics_web:
   firebase_core:
+  get: ^4.6.6
 
 dev_dependencies:
   flutter_test:
