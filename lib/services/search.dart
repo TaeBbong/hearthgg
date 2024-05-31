@@ -7,7 +7,8 @@ class SearchService {
       {required String areaCode, required String id}) async {
     // String areaCode = areas[area]!;
     // String id = battleTagController.text;
-    String searchParams = 'seasonid=45&area=$areaCode&accountid=$id';
+    String searchParams =
+        'seasonid=45&area=$areaCode&accountid=$id'; // TODO: Fix hardcoded seasonid via /season api
     String searchUrl = Env.apiUrl + searchParams;
 
     var result = await http.get(Uri.parse(searchUrl));

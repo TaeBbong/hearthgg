@@ -1,5 +1,6 @@
 import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:flutter/material.dart';
+import 'package:hearth_arena_rank_web/models/rankdata.dart';
 
 import '../services/search.dart';
 import '../widgets/rank_card.dart';
@@ -158,7 +159,8 @@ class _DesktopScreenState extends State<DesktopScreen> {
               : isResult
                   ? SizedBox(
                       width: MediaQuery.of(context).size.width * 0.41,
-                      child: RankCard(rankData: searchResult),
+                      child:
+                          RankCard(rankData: RankData.fromJson(searchResult)),
                     )
                   : Container(),
           Expanded(child: Container()),

@@ -1,5 +1,6 @@
 import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:flutter/material.dart';
+import 'package:hearth_arena_rank_web/models/rankdata.dart';
 import '../constants/area.dart';
 import '../widgets/rank_card.dart';
 
@@ -164,7 +165,9 @@ class _MobileScreenState extends State<MobileScreen> {
                       : isResult
                           ? SizedBox(
                               width: MediaQuery.of(context).size.width * 0.8,
-                              child: RankCard(rankData: searchResult))
+                              child: RankCard(
+                                  rankData: RankData.fromJson(searchResult)),
+                            )
                           : Container(),
                 ],
               ),
