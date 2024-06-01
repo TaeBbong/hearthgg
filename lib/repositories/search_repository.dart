@@ -27,7 +27,7 @@ class SearchRepository extends GetxService {
     // String areaCode = areas[area]!;
     // String id = battleTagController.text;
     String searchParams =
-        'seasonid=45&area=$areaCode&accountid=$id'; // TODO: Fix hardcoded seasonid via /season api
+        'seasonid=46&area=$areaCode&accountid=$id'; // TODO: Fix hardcoded seasonid via /season api
     String searchUrl = Env.apiUrl + searchParams;
 
     var result = await http.get(Uri.parse(searchUrl));
