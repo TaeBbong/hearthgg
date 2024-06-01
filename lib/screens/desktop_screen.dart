@@ -1,47 +1,32 @@
-import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-import '../services/search.dart';
+import '../controllers/home_controller.dart';
+import '../services/main_service.dart';
+import '../models/rankdata.dart';
+import '../widgets/loading_indicator.dart';
 import '../widgets/rank_card.dart';
 import '../widgets/footer.dart';
 import '../constants/area.dart';
 
-class DesktopScreen extends StatefulWidget {
-  final bool isDarkMode;
-  final Function(bool) toggleTheme;
-  final FirebaseAnalyticsWeb analytics;
+class DesktopScreen extends GetView<HomeController> {
+  DesktopScreen({super.key});
 
-  const DesktopScreen(
-      {super.key,
-      required this.isDarkMode,
-      required this.toggleTheme,
-      required this.analytics});
-
-  @override
-  _DesktopScreenState createState() => _DesktopScreenState();
-}
-
-class _DesktopScreenState extends State<DesktopScreen> {
-  AreaLabel area = AreaLabel.ap;
-  TextEditingController battleTagController = TextEditingController();
-  SearchService service = SearchService();
-  bool isSearching = false;
-  bool isResult = false;
-  Map<String, dynamic> searchResult = {'status': false};
+  final mainService = Get.find<MainService>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: InkWell(
-          child: Text('Hearth.gg'),
+          child: const Text('Hearth.gg'),
           onTap: () {},
         ),
         centerTitle: false,
         actions: [
           Switch(
-            value: widget.isDarkMode,
-            onChanged: widget.toggleTheme,
+            value: mainService.isDarkMode,
+            onChanged: mainService.changeMode,
             activeColor: Colors.blue,
           ),
         ],
@@ -58,7 +43,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
                 Expanded(
                   child: DropdownButtonHideUnderline(
                     child: DropdownButtonFormField<AreaLabel>(
-                      value: area,
+                      value: controller.searchParams['area'],
                       items: AreaLabel.values
                           .map<DropdownMenuItem<AreaLabel>>((AreaLabel value) {
                         return DropdownMenuItem<AreaLabel>(
@@ -69,13 +54,9 @@ class _DesktopScreenState extends State<DesktopScreen> {
                           ),
                         );
                       }).toList(),
-                      onChanged: (AreaLabel? newValue) {
-                        setState(() {
-                          area = newValue!;
-                        });
-                      },
+                      onChanged: (area) => controller.updateArea(area!),
                       isExpanded: true,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         enabledBorder: OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey, width: 1),
                         ),
@@ -85,82 +66,40 @@ class _DesktopScreenState extends State<DesktopScreen> {
                     ),
                   ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Expanded(
                   flex: 2,
                   child: TextFormField(
-                    controller: battleTagController,
-                    onFieldSubmitted: (_) async {
-                      await widget.analytics.logEvent(
-                          name:
-                              '[+] Search Event with EnterKey ${battleTagController.text}');
-                      setState(() {
-                        isSearching = true;
-                        searchResult = {'status': false};
-                        isResult = false;
-                      });
-                      await service
-                          .performSearch(
-                              areaCode: area.code, id: battleTagController.text)
-                          .then((result) {
-                        setState(() {
-                          isSearching = false;
-                          if (result['status']) {
-                            isResult = true;
-                            searchResult = result;
-                          }
-                        });
-                      });
-                    },
-                    decoration: InputDecoration(
+                    controller: controller.battleTagController,
+                    onFieldSubmitted: (_) async =>
+                        await controller.performSearch(),
+                    decoration: const InputDecoration(
                       hintText: '배틀태그를 입력하세요. (ex: Flurry)',
                       border: OutlineInputBorder(),
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.search),
-                  onPressed: () async {
-                    await widget.analytics.logEvent(
-                        name:
-                            '[+] Search Event with Button ${battleTagController.text}');
-                    setState(() {
-                      isSearching = true;
-                      searchResult = {'status': false};
-                      isResult = false;
-                    });
-                    await service
-                        .performSearch(
-                            areaCode: area.code, id: battleTagController.text)
-                        .then((result) {
-                      setState(() {
-                        isSearching = false;
-                        if (result['status']) {
-                          isResult = true;
-                          searchResult = result;
-                        }
-                      });
-                    });
-                  },
+                  icon: const Icon(Icons.search),
+                  onPressed: () async => await controller.performSearch(),
                 ),
               ],
             ),
           ),
-          isSearching
-              ? Container(
-                  padding: const EdgeInsets.all(15),
-                  height: 150,
-                  width: 150,
-                  child: const CircularProgressIndicator(
-                    strokeWidth: 15,
-                  ),
-                )
-              : isResult
-                  ? SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.41,
-                      child: RankCard(rankData: searchResult),
-                    )
-                  : Container(),
+          GetBuilder<HomeController>(
+            builder: (controller) {
+              return controller.isSearching
+                  ? const LoadingIndicator()
+                  : controller.isResult
+                      ? SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.41,
+                          child: RankCard(
+                              rankData:
+                                  RankData.fromJson(controller.searchResult)),
+                        )
+                      : Container();
+            },
+          ),
           Expanded(child: Container()),
           Footer(),
         ],

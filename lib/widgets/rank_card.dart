@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../models/rankdata.dart';
 
 class RankCard extends StatelessWidget {
-  final Map<String, dynamic> rankData;
+  final RankData rankData;
 
   RankCard({required this.rankData});
 
@@ -20,14 +21,13 @@ class RankCard extends StatelessWidget {
           children: [
             ListTile(
               leading: CircleAvatar(
-                child:
-                    Text(rankData['accountid'].substring(0, 1).toUpperCase()),
+                child: Text(rankData.accountid.substring(0, 1).toUpperCase()),
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
               ),
-              title: Text(rankData['accountid'],
+              title: Text(rankData.accountid,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              subtitle: Text('순위: ${rankData['rank']}등'),
+              subtitle: Text('순위: ${rankData.rank}등'),
             ),
             Divider(),
             Row(
@@ -38,7 +38,7 @@ class RankCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text('평균승수: ${rankData['rating']}',
+                        Text('평균승수: ${rankData.rating}',
                             style: TextStyle(fontSize: 16)),
                       ],
                     ),
