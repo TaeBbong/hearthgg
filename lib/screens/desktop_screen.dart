@@ -1,31 +1,34 @@
-import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:flutter/material.dart';
-import 'package:hearth_arena_rank_web/models/rankdata.dart';
+import 'package:get/get.dart';
+import '../services/main_service.dart';
+import '../models/rankdata.dart';
 
-import '../services/search.dart';
+import '../repositories/search_repository.dart';
 import '../widgets/rank_card.dart';
 import '../widgets/footer.dart';
 import '../constants/area.dart';
 
 class DesktopScreen extends StatefulWidget {
-  final bool isDarkMode;
-  final Function(bool) toggleTheme;
-  final FirebaseAnalyticsWeb analytics;
+  // final bool isDarkMode;
+  // final Function(bool) toggleTheme;
+  // final FirebaseAnalyticsWeb analytics;
 
-  const DesktopScreen(
-      {super.key,
-      required this.isDarkMode,
-      required this.toggleTheme,
-      required this.analytics});
+  // const DesktopScreen(
+  //     {super.key,
+  //     required this.isDarkMode,
+  //     required this.toggleTheme,
+  //     required this.analytics});
 
   @override
   _DesktopScreenState createState() => _DesktopScreenState();
 }
 
 class _DesktopScreenState extends State<DesktopScreen> {
+  final mainService = Get.find<MainService>();
+
   AreaLabel area = AreaLabel.ap;
   TextEditingController battleTagController = TextEditingController();
-  SearchService service = SearchService();
+  SearchRepository service = SearchRepository();
   bool isSearching = false;
   bool isResult = false;
   Map<String, dynamic> searchResult = {'status': false};
@@ -41,8 +44,8 @@ class _DesktopScreenState extends State<DesktopScreen> {
         centerTitle: false,
         actions: [
           Switch(
-            value: widget.isDarkMode,
-            onChanged: widget.toggleTheme,
+            value: mainService.isDarkMode,
+            onChanged: mainService.changeMode,
             activeColor: Colors.blue,
           ),
         ],
@@ -92,7 +95,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
                   child: TextFormField(
                     controller: battleTagController,
                     onFieldSubmitted: (_) async {
-                      await widget.analytics.logEvent(
+                      await mainService.analytics.logEvent(
                           name:
                               '[+] Search Event with EnterKey ${battleTagController.text}');
                       setState(() {
@@ -122,7 +125,7 @@ class _DesktopScreenState extends State<DesktopScreen> {
                 IconButton(
                   icon: Icon(Icons.search),
                   onPressed: () async {
-                    await widget.analytics.logEvent(
+                    await mainService.analytics.logEvent(
                         name:
                             '[+] Search Event with Button ${battleTagController.text}');
                     setState(() {

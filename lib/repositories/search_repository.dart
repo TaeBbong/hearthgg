@@ -1,8 +1,27 @@
+import 'package:get/get.dart';
+
 import '../env.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class SearchService {
+class SearchRepository extends GetxService {
+  Future<Map<String, dynamic>> fetchSeason({required String mode}) async {
+    String searchParams = 'mode=$mode';
+    String searchUrl = Env.apiUrl + searchParams;
+
+    var result = await http.get(Uri.parse(searchUrl));
+    var parsed = jsonDecode(result.body);
+
+    if (parsed.containsKey("old")) {
+      return {
+        'status': true,
+        'old': parsed['old'],
+        'new': parsed['new'],
+      };
+    }
+    return {'status': false};
+  }
+
   Future<Map<String, dynamic>> performSearch(
       {required String areaCode, required String id}) async {
     // String areaCode = areas[area]!;

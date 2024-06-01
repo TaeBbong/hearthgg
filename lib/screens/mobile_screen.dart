@@ -1,31 +1,23 @@
-import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:flutter/material.dart';
-import 'package:hearth_arena_rank_web/models/rankdata.dart';
-import '../constants/area.dart';
-import '../widgets/rank_card.dart';
+import 'package:get/get.dart';
 
+import '../models/rankdata.dart';
+import '../constants/area.dart';
+import '../services/main_service.dart';
+import '../widgets/rank_card.dart';
 import '../widgets/footer.dart';
-import '../services/search.dart';
+import '../repositories/search_repository.dart';
 
 class MobileScreen extends StatefulWidget {
-  final bool isDarkMode;
-  final Function(bool) toggleTheme;
-  final FirebaseAnalyticsWeb analytics;
-
-  const MobileScreen(
-      {super.key,
-      required this.isDarkMode,
-      required this.toggleTheme,
-      required this.analytics});
-
   @override
   _MobileScreenState createState() => _MobileScreenState();
 }
 
 class _MobileScreenState extends State<MobileScreen> {
+  final mainService = Get.find<MainService>();
   AreaLabel area = AreaLabel.ap;
   TextEditingController battleTagController = TextEditingController();
-  SearchService service = SearchService();
+  SearchRepository service = SearchRepository();
   bool isSearching = false;
   bool isResult = false;
   Map<String, dynamic> searchResult = {'status': false};
@@ -37,8 +29,8 @@ class _MobileScreenState extends State<MobileScreen> {
         title: Text('Hearth.gg'),
         actions: [
           Switch(
-            value: widget.isDarkMode,
-            onChanged: widget.toggleTheme,
+            value: mainService.isDarkMode,
+            onChanged: mainService.changeMode,
             activeColor: Colors.blue,
           ),
         ],
@@ -92,7 +84,7 @@ class _MobileScreenState extends State<MobileScreen> {
                           child: TextFormField(
                             controller: battleTagController,
                             onFieldSubmitted: (_) async {
-                              await widget.analytics.logEvent(
+                              await mainService.analytics.logEvent(
                                   name:
                                       '[+] Search Event with EnterKey ${battleTagController.text}');
                               setState(() {
@@ -122,7 +114,7 @@ class _MobileScreenState extends State<MobileScreen> {
                               suffixIcon: IconButton(
                                 icon: Icon(Icons.search),
                                 onPressed: () async {
-                                  await widget.analytics.logEvent(
+                                  await mainService.analytics.logEvent(
                                       name:
                                           '[+] Search Event with Button ${battleTagController.text}');
                                   setState(() {

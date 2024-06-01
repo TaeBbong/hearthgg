@@ -1,13 +1,14 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'package:get/get.dart';
 
+import 'services/main_service.dart';
+import 'bindings/initial_bindings.dart';
 import 'firebase_options.dart';
 import 'screens/mobile_screen.dart';
 import 'screens/desktop_screen.dart';
-
 import 'widgets/responsive_layout.dart';
 import 'constants/theme.dart';
 
@@ -17,51 +18,27 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   usePathUrlStrategy();
-  runApp(const MainApp());
+  InitialBindings().dependencies();
+  runApp(MainApp());
 }
 
-class MainApp extends StatefulWidget {
-  const MainApp({super.key});
-
-  @override
-  _MainAppState createState() => _MainAppState();
-}
-
-class _MainAppState extends State<MainApp> {
-  bool _isDarkMode = false;
-
-  static FirebaseAnalyticsWeb analytics = FirebaseAnalyticsWeb();
-
-  void toggleTheme(bool isOn) {
-    setState(() {
-      _isDarkMode = isOn;
-    });
-  }
-
+class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: _isDarkMode ? darkTheme : lightTheme,
-      home: ResponsiveLayout(
-        mobileLayout: MobileScreen(
-          isDarkMode: _isDarkMode,
-          toggleTheme: toggleTheme,
-          analytics: analytics,
-        ),
-        tabletLayout: MobileScreen(
-          isDarkMode: _isDarkMode,
-          toggleTheme: toggleTheme,
-          analytics: analytics,
-        ),
-        desktopLayout: DesktopScreen(
-          isDarkMode: _isDarkMode,
-          toggleTheme: toggleTheme,
-          analytics: analytics,
-        ),
-      ),
-    ).animate().fadeIn(
-          duration: 400.ms,
-        );
+    return GetBuilder<MainService>(
+      builder: (controller) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: controller.isDarkMode ? darkTheme : lightTheme,
+          home: ResponsiveLayout(
+            mobileLayout: MobileScreen(),
+            tabletLayout: MobileScreen(),
+            desktopLayout: DesktopScreen(),
+          ),
+        ).animate().fadeIn(
+              duration: 400.ms,
+            );
+      },
+    );
   }
 }
