@@ -19,10 +19,12 @@ void main() async {
   );
   usePathUrlStrategy();
   InitialBindings().dependencies();
-  runApp(MainApp());
+  runApp(const MainApp());
 }
 
 class MainApp extends StatelessWidget {
+  const MainApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return GetBuilder<MainService>(

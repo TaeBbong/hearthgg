@@ -22,7 +22,7 @@ class SearchRepository extends GetxService {
     return {'status': false};
   }
 
-  Future<Map<String, dynamic>> performSearch(
+  Future<Map<String, dynamic>> fetchRank(
       {required String areaCode, required String id}) async {
     // String areaCode = areas[area]!;
     // String id = battleTagController.text;
@@ -32,6 +32,7 @@ class SearchRepository extends GetxService {
 
     var result = await http.get(Uri.parse(searchUrl));
     var parsed = jsonDecode(result.body);
+    print(parsed);
 
     if (parsed.containsKey("rank")) {
       return {
