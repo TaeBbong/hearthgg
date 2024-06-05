@@ -1,6 +1,6 @@
 enum ModeLabel {
   arena('투기장', 'arena'),
-  standard('정규', 'standard');
+  standard('정규전', 'standard');
 
   final String text;
   final String code;
