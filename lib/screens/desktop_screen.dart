@@ -5,6 +5,7 @@ import '../controllers/home_controller.dart';
 import '../services/main_service.dart';
 import '../models/rankdata.dart';
 import '../widgets/loading_indicator.dart';
+import '../widgets/mode_indicator.dart';
 import '../widgets/rank_card.dart';
 import '../widgets/footer.dart';
 import '../constants/area.dart';
@@ -32,10 +33,12 @@ class DesktopScreen extends GetView<HomeController> {
         ],
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Padding(
             padding: EdgeInsets.all(20.0),
           ),
+          ModeIndicator(),
           SizedBox(
             width: MediaQuery.of(context).size.width * 0.4,
             child: Row(
