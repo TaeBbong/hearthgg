@@ -45,6 +45,7 @@ class DesktopScreen extends GetView<HomeController> {
               child: Row(
                 children: <Widget>[
                   Expanded(
+                    flex: 2,
                     child: DropdownButtonHideUnderline(
                       child: DropdownButtonFormField<AreaLabel>(
                         value: controller.searchParams['area'],
@@ -55,7 +56,7 @@ class DesktopScreen extends GetView<HomeController> {
                             value: value,
                             child: Text(
                               value.text,
-                              style: Theme.of(context).textTheme.bodyMedium,
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
                           );
                         }).toList(),
@@ -74,21 +75,22 @@ class DesktopScreen extends GetView<HomeController> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
+                    flex: 1,
                     child: DropdownButtonHideUnderline(
-                      child: DropdownButtonFormField<AreaLabel>(
-                        value: controller.searchParams['area'],
-                        items: AreaLabel.values
-                            .map<DropdownMenuItem<AreaLabel>>(
-                                (AreaLabel value) {
-                          return DropdownMenuItem<AreaLabel>(
-                            value: value,
+                      child: DropdownButtonFormField<int>(
+                        value: mainService
+                            .seasons[controller.selectedMode.code].last,
+                        items: mainService.seasons[controller.selectedMode.code]
+                            .map<DropdownMenuItem<int>>((int season) {
+                          return DropdownMenuItem<int>(
+                            value: season,
                             child: Text(
-                              value.text,
-                              style: Theme.of(context).textTheme.bodyMedium,
+                              season.toString(),
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
                           );
                         }).toList(),
-                        onChanged: (area) => controller.updateArea(area!),
+                        onChanged: (season) => controller.updateSeason(season!),
                         isExpanded: true,
                         decoration: const InputDecoration(
                           enabledBorder: OutlineInputBorder(
@@ -103,7 +105,7 @@ class DesktopScreen extends GetView<HomeController> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    flex: 4,
+                    flex: 5,
                     child: TextFormField(
                       controller: controller.battleTagController,
                       onFieldSubmitted: (_) async =>
