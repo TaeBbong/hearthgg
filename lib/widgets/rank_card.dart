@@ -14,35 +14,38 @@ class RankCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ListTile(
               leading: CircleAvatar(
-                child: Text(rankData.accountid.substring(0, 1).toUpperCase()),
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
+                child: Text(rankData.accountid.substring(0, 1).toUpperCase()),
               ),
               title: Text(rankData.accountid,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold)),
               subtitle: Text('순위: ${rankData.rank}등'),
             ),
-            Divider(),
+            const Divider(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text('평균승수: ${rankData.rating}',
-                            style: TextStyle(fontSize: 16)),
-                      ],
-                    ),
-                  ],
+                  children: rankData.rating == null
+                      ? []
+                      : [
+                          Row(
+                            children: [
+                              Text('평균승수: ${rankData.rating}',
+                                  style: const TextStyle(fontSize: 16)),
+                            ],
+                          ),
+                        ],
                 ),
                 // ElevatedButton( // 이미지로 저장하기
                 //   onPressed: () {
