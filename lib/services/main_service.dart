@@ -1,11 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 import 'package:firebase_analytics_web/firebase_analytics_web.dart';
 import 'package:get/get.dart';
 
-import '../env.dart';
 import '../repositories/search_repository.dart';
 
 class MainService extends GetxController {
