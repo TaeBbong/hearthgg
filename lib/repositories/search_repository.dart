@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 class SearchRepository extends GetxService {
   Future<Map<String, dynamic>> fetchSeason({required String mode}) async {
     String searchParams = 'mode=$mode';
-    String searchUrl = Env.apiUrl + searchParams;
+    String searchUrl = Env.seasonUrl + searchParams;
 
     var result = await http.get(Uri.parse(searchUrl));
     var parsed = jsonDecode(result.body);
