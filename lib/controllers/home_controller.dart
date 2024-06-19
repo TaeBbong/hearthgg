@@ -10,6 +10,8 @@ class HomeController extends GetxController {
   bool isResult = false;
   Map<String, dynamic> searchParams = {
     'area': AreaLabel.ap,
+    'season': 46,
+    'mode': ModeLabel.arena,
   };
   Map<String, dynamic> searchResult = {};
   TextEditingController battleTagController = TextEditingController();
@@ -22,8 +24,14 @@ class HomeController extends GetxController {
     searchParams['area'] = area;
   }
 
+  void updateSeason(int season) {
+    searchParams['season'] = season;
+  }
+
   void updateMode(ModeLabel mode) {
     selectedMode = mode;
+    searchParams['season'] = mainService.seasons[mode.code].last;
+    searchParams['mode'] = mode;
     update();
   }
 
@@ -36,8 +44,7 @@ class HomeController extends GetxController {
     await mainService.analytics
         .logEvent(name: '[+] Search id : ${battleTagController.text}');
     await searchRepository
-        .fetchRank(
-            areaCode: searchParams['area'].code, id: battleTagController.text)
+        .fetchRank(searchParams: searchParams, id: battleTagController.text)
         .then((result) {
       isSearching = false;
       if (result['status']) {

@@ -9,7 +9,11 @@ const TextTheme lightTextTheme = TextTheme(
     fontFamily: 'Pretendard',
     color: Colors.black54,
   ),
-  bodySmall: TextStyle(fontSize: 14, fontFamily: 'Pretendard'),
+  bodySmall: TextStyle(
+    fontSize: 14,
+    fontFamily: 'Pretendard',
+    color: Colors.black54,
+  ),
 );
 
 const TextTheme darkTextTheme = TextTheme(
@@ -21,5 +25,9 @@ const TextTheme darkTextTheme = TextTheme(
     fontFamily: 'Pretendard',
     color: Colors.grey,
   ),
-  bodySmall: TextStyle(fontSize: 14, fontFamily: 'Pretendard'),
+  bodySmall: TextStyle(
+    fontSize: 14,
+    fontFamily: 'Pretendard',
+    color: Colors.grey,
+  ),
 );
