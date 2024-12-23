@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:path/path.dart' as path;
 
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -73,7 +74,7 @@ class SearchRepository extends GetxService {
       String mode = parsedParams['mode'];
       String area = parsedParams['area'];
       String season = parsedParams['season'];
-      String filePath = 'data/$mode/$season/$area.json';
+      String filePath = path.join('data', mode, season, '$area.json');
 
       String jsonString = await rootBundle.loadString(filePath);
       List<dynamic> dataList = jsonDecode(jsonString);
