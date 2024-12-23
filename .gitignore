@@ -3,6 +3,7 @@
 .firebaserc
 firebase.json
 lib/firebase_options.dart
+lib/data/*
 
 # Env
 lib/env.dart
