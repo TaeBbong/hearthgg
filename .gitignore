@@ -4,6 +4,7 @@
 firebase.json
 lib/firebase_options.dart
 lib/data/*
+assets/data/*
 
 # Env
 lib/env.dart

@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../env.dart';
@@ -15,20 +18,30 @@ class SearchRepository extends GetxService {
   );
 
   Future<Map<String, dynamic>> fetchSeason({required String mode}) async {
-    String searchParams = 'mode=$mode';
-    String searchUrl = Env.seasonUrl + searchParams;
+    if (Env.runMode == RunMode.production) {
+      String searchParams = 'mode=$mode';
+      String searchUrl = Env.seasonUrl + searchParams;
 
-    var result = await client.get(Uri.parse(searchUrl));
-    var parsed = jsonDecode(result.body);
+      var result = await client.get(Uri.parse(searchUrl));
+      var parsed = jsonDecode(result.body);
 
-    if (parsed.containsKey("old")) {
-      return {
-        'status': true,
-        'old': parsed['old'],
-        'new': parsed['new'],
-      };
+      if (parsed.containsKey("old")) {
+        return {
+          'status': true,
+          'old': parsed['old'],
+          'new': parsed['new'],
+        };
+      }
+      return {'status': false};
+    } else if (Env.runMode == RunMode.archive) {
+      if (mode == 'arena') {
+        return {'status': true, 'old': 46, 'new': 52};
+      } else {
+        return {'status': true, 'old': 128, 'new': 134};
+      }
+    } else {
+      return {'status': false};
     }
-    return {'status': false};
   }
 
   Future<Map<String, dynamic>> fetchRank(
@@ -39,20 +52,45 @@ class SearchRepository extends GetxService {
       'season': searchParams['season'].toString(),
       'accountid': id,
     };
-    String queryString = Uri(queryParameters: parsedParams).query;
-    String searchUrl = Env.apiUrl + queryString;
 
-    var result = await client.get(Uri.parse(searchUrl));
-    var parsed = jsonDecode(result.body);
+    if (Env.runMode == RunMode.production) {
+      String queryString = Uri(queryParameters: parsedParams).query;
+      String searchUrl = Env.apiUrl + queryString;
 
-    if (parsed.containsKey("rank")) {
-      return {
-        'status': true,
-        'accountid': parsed['accountid'],
-        'rank': parsed['rank'],
-        'rating': parsed['rating']
-      };
+      var result = await client.get(Uri.parse(searchUrl));
+      var parsed = jsonDecode(result.body);
+
+      if (parsed.containsKey("rank")) {
+        return {
+          'status': true,
+          'accountid': parsed['accountid'],
+          'rank': parsed['rank'],
+          'rating': parsed['rating']
+        };
+      }
+      return {'status': false};
+    } else if (Env.runMode == RunMode.archive) {
+      String mode = parsedParams['mode'];
+      String area = parsedParams['area'];
+      String season = parsedParams['season'];
+      String filePath = 'data/$mode/$season/$area.json';
+
+      String jsonString = await rootBundle.loadString(filePath);
+      List<dynamic> dataList = jsonDecode(jsonString);
+
+      for (var data in dataList) {
+        if (data['accountid'] == id) {
+          return {
+            'status': true,
+            'accountid': id,
+            'rank': data['rank'],
+            'rating': data['rating']
+          };
+        }
+      }
+      return {'status': false};
+    } else {
+      return {'status': false};
     }
-    return {'status': false};
   }
 }

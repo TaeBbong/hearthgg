@@ -9,8 +9,8 @@ class MainService extends GetxController {
   bool isDarkMode = false;
   final FirebaseAnalyticsWeb analytics = FirebaseAnalyticsWeb();
   Map<String, dynamic> seasons = {
-    'arena': [44, 45],
-    'standard': [128],
+    'arena': [46, 47, 48, 49, 50, 51, 52],
+    'standard': [128, 129, 130, 131, 132, 133, 134],
   };
 
   Future<Map<String, dynamic>> fetchSeason() async {
