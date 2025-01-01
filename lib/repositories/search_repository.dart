@@ -1,8 +1,5 @@
-import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path/path.dart' as path;
-
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../env.dart';
@@ -94,13 +91,19 @@ class SearchRepository extends GetxService {
               };
             }
           }
+          return {'status': false, 'reason': 'No data found in json.'};
         } else {
-          return {'status': false};
-          // throw Exception('Failed to load JSON file');
+          return {
+            'status': false,
+            'reason': 'Error while getting json file with url.'
+          };
         }
       } catch (e) {
         print('Error reading JSON: $e');
-        return {'status': false};
+        return {
+          'status': false,
+          'reason': 'Exception while get data from storage, $e'
+        };
       }
     } else {
       return {'status': false};
