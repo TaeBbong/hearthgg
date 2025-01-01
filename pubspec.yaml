@@ -15,6 +15,7 @@ dependencies:
   http:
   firebase_analytics_web:
   firebase_core:
+  firebase_storage:
   get: ^4.6.6
   freezed_annotation: ^2.4.1
   json_annotation: ^4.9.0
@@ -32,8 +33,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/
     - assets/data/
+    - assets/images/
   fonts:
     - family: Pretendard
       fonts:

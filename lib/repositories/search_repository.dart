@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:path/path.dart' as path;
 
 import 'package:flutter/services.dart';
@@ -75,21 +76,32 @@ class SearchRepository extends GetxService {
       String area = parsedParams['area'];
       String season = parsedParams['season'];
       String filePath = path.join('data', mode, season, '$area.json');
-
-      String jsonString = await rootBundle.loadString(filePath);
-      List<dynamic> dataList = jsonDecode(jsonString);
-
-      for (var data in dataList) {
-        if (data['accountid'] == id) {
-          return {
-            'status': true,
-            'accountid': id,
-            'rank': data['rank'],
-            'rating': data['rating']
-          };
+      String jsonString = '';
+      final FirebaseStorage _storage = FirebaseStorage.instance;
+      try {
+        String downloadURL = await _storage.ref(filePath).getDownloadURL();
+        final response = await http.get(Uri.parse(downloadURL));
+        if (response.statusCode == 200) {
+          jsonString = json.decode(response.body);
+          List<dynamic> dataList = jsonDecode(jsonString);
+          for (var data in dataList) {
+            if (data['accountid'] == id) {
+              return {
+                'status': true,
+                'accountid': id,
+                'rank': data['rank'],
+                'rating': data['rating']
+              };
+            }
+          }
+        } else {
+          return {'status': false};
+          // throw Exception('Failed to load JSON file');
         }
+      } catch (e) {
+        print('Error reading JSON: $e');
+        return {'status': false};
       }
-      return {'status': false};
     } else {
       return {'status': false};
     }
