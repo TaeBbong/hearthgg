@@ -1,0 +1,2 @@
+# Optional: Discord-compatible webhook that receives crawl failure alerts.
+ALERT_WEBHOOK_URL=
