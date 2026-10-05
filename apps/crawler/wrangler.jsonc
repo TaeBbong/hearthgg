@@ -5,8 +5,8 @@
   "compatibility_date": "2026-08-01",
   "observability": { "enabled": true },
   "triggers": {
-    // Probe every board every 5 minutes; snapshot daily history at 23:55 KST.
-    "crons": ["*/5 * * * *", "55 14 * * *"]
+    // Probe every board every 5 minutes; ticks between 23:50 and 24:00 KST also record daily history.
+    "crons": ["*/5 * * * *"]
   },
   "r2_buckets": [{ "binding": "SNAPSHOTS", "bucket_name": "hearthgg-snapshots" }],
   "d1_databases": [
