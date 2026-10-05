@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
+/* Theme is a class on <html> (next-themes), not only the media query. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. Inspired by op.gg's information-dense layout: a cool grey
+ * canvas, white cards with hairline borders, one saturated blue for actions,
+ * and 12–13px tabular numbers in tables.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #ebeef1;
+  --surface: #ffffff;
+  --surface-muted: #f7f7f9;
+  --border: #dbe0e4;
+  --border-subtle: #ebeef1;
+  --foreground: #202d37;
+  --muted: #758592;
+  --subtle: #9aa4af;
+  --primary: #5383e8;
+  --primary-strong: #4171d6;
+  --primary-soft: #ecf2ff;
+  --danger: #e84057;
+  --danger-soft: #fff1f3;
+  --success: #00a37a;
+  --header: #5383e8;
+  --header-foreground: #ffffff;
+
+  --rank-1: #e8a70e;
+  --rank-2: #8c9aa8;
+  --rank-3: #b97a4f;
+
+  --mode-arena: #ee8a36;
+  --mode-undergroundarena: #9a6ce0;
+  --mode-standard: #5383e8;
+  --mode-wild: #1fa37e;
+  --mode-battlegrounds: #d2a12c;
+
+  color-scheme: light;
+}
+
+.dark {
+  --background: #1c1c1f;
+  --surface: #31313c;
+  --surface-muted: #282830;
+  --border: #424254;
+  --border-subtle: #3a3a48;
+  --foreground: #ebeef1;
+  --muted: #9e9eb1;
+  --subtle: #7b7a8e;
+  --primary: #5383e8;
+  --primary-strong: #6b95ef;
+  --primary-soft: #28344e;
+  --danger: #e84057;
+  --danger-soft: #59343b;
+  --success: #2ec4a0;
+  --header: #31313c;
+  --header-foreground: #ebeef1;
+
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-header: var(--header);
+  --color-header-foreground: var(--header-foreground);
+  --color-rank-1: var(--rank-1);
+  --color-rank-2: var(--rank-2);
+  --color-rank-3: var(--rank-3);
+  --color-mode-arena: var(--mode-arena);
+  --color-mode-undergroundarena: var(--mode-undergroundarena);
+  --color-mode-standard: var(--mode-standard);
+  --color-mode-wild: var(--mode-wild);
+  --color-mode-battlegrounds: var(--mode-battlegrounds);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo",
+    "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
