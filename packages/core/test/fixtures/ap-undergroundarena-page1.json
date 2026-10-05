@@ -1,0 +1,147 @@
+{
+  "seasonId": 9,
+  "leaderboard": {
+    "rows": [
+      {
+        "rank": 1,
+        "accountid": "noungag",
+        "rating": 7729
+      },
+      {
+        "rank": 2,
+        "accountid": "poko",
+        "rating": 7707
+      },
+      {
+        "rank": 3,
+        "accountid": "비웃기",
+        "rating": 6922
+      },
+      {
+        "rank": 4,
+        "accountid": "GhostDragon",
+        "rating": 6825
+      },
+      {
+        "rank": 5,
+        "accountid": "SA3",
+        "rating": 6821
+      },
+      {
+        "rank": 6,
+        "accountid": "小小",
+        "rating": 6739
+      },
+      {
+        "rank": 7,
+        "accountid": "守仁丨玖叁",
+        "rating": 6607
+      },
+      {
+        "rank": 8,
+        "accountid": "Pluto",
+        "rating": 6558
+      },
+      {
+        "rank": 9,
+        "accountid": "Grog",
+        "rating": 6547
+      },
+      {
+        "rank": 10,
+        "accountid": "Y7bWC",
+        "rating": 6542
+      },
+      {
+        "rank": 11,
+        "accountid": "JJoung",
+        "rating": 6518
+      },
+      {
+        "rank": 12,
+        "accountid": "wmhxijedmz",
+        "rating": 6384
+      },
+      {
+        "rank": 13,
+        "accountid": "Hoooot",
+        "rating": 6302
+      },
+      {
+        "rank": 14,
+        "accountid": "Godgun",
+        "rating": 6299
+      },
+      {
+        "rank": 15,
+        "accountid": "Leewoo",
+        "rating": 6232
+      },
+      {
+        "rank": 16,
+        "accountid": "CNnightlight",
+        "rating": 6185
+      },
+      {
+        "rank": 17,
+        "accountid": "北堂纥奚",
+        "rating": 6153
+      },
+      {
+        "rank": 18,
+        "accountid": "YirgaChefe",
+        "rating": 6151
+      },
+      {
+        "rank": 19,
+        "accountid": "HSwinme",
+        "rating": 6142
+      },
+      {
+        "rank": 20,
+        "accountid": "aqua",
+        "rating": 6110
+      },
+      {
+        "rank": 21,
+        "accountid": "Yehshu",
+        "rating": 6098
+      },
+      {
+        "rank": 22,
+        "accountid": "八云",
+        "rating": 6091
+      },
+      {
+        "rank": 23,
+        "accountid": "seneca",
+        "rating": 6063
+      },
+      {
+        "rank": 24,
+        "accountid": "斬鐵",
+        "rating": 6061
+      },
+      {
+        "rank": 25,
+        "accountid": "yilingsama",
+        "rating": 5991
+      }
+    ],
+    "columns": [
+      "rank",
+      "accountid",
+      "rating"
+    ],
+    "pagination": {
+      "totalPages": 144,
+      "totalSize": 3582
+    }
+  },
+  "regions": {
+    "US": 1,
+    "EU": 2,
+    "AP": 3
+  },
+  "region": "AP"
+}

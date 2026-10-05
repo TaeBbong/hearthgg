@@ -1,0 +1,147 @@
+{
+  "seasonId": 56,
+  "leaderboard": {
+    "rows": [
+      {
+        "rank": 1,
+        "accountid": "真蕉昵称无双改",
+        "rating": 7.77
+      },
+      {
+        "rank": 2,
+        "accountid": "okazuya",
+        "rating": 7.16
+      },
+      {
+        "rank": 3,
+        "accountid": "Marvel",
+        "rating": 6.97
+      },
+      {
+        "rank": 4,
+        "accountid": "Pariiksan",
+        "rating": 6.89
+      },
+      {
+        "rank": 5,
+        "accountid": "izukei",
+        "rating": 6.88
+      },
+      {
+        "rank": 6,
+        "accountid": "戴便买号改名冲榜",
+        "rating": 6.8
+      },
+      {
+        "rank": 7,
+        "accountid": "SA3",
+        "rating": 6.8
+      },
+      {
+        "rank": 8,
+        "accountid": "一本便",
+        "rating": 6.79
+      },
+      {
+        "rank": 9,
+        "accountid": "MightyOwl",
+        "rating": 6.77
+      },
+      {
+        "rank": 10,
+        "accountid": "Hunterwolf",
+        "rating": 6.71
+      },
+      {
+        "rank": 11,
+        "accountid": "HSwinme",
+        "rating": 6.69
+      },
+      {
+        "rank": 12,
+        "accountid": "hsjj",
+        "rating": 6.68
+      },
+      {
+        "rank": 13,
+        "accountid": "AE86",
+        "rating": 6.56
+      },
+      {
+        "rank": 14,
+        "accountid": "Kinertiyu",
+        "rating": 6.37
+      },
+      {
+        "rank": 15,
+        "accountid": "sibhtnz",
+        "rating": 6.31
+      },
+      {
+        "rank": 16,
+        "accountid": "aqua",
+        "rating": 6.23
+      },
+      {
+        "rank": 17,
+        "accountid": "ProV",
+        "rating": 6.23
+      },
+      {
+        "rank": 18,
+        "accountid": "YTMrVery888",
+        "rating": 6.2
+      },
+      {
+        "rank": 19,
+        "accountid": "승기",
+        "rating": 6.14
+      },
+      {
+        "rank": 20,
+        "accountid": "Inexplicable",
+        "rating": 6.1
+      },
+      {
+        "rank": 21,
+        "accountid": "rep",
+        "rating": 6.07
+      },
+      {
+        "rank": 22,
+        "accountid": "黑暗的粉色伊萊克",
+        "rating": 5.98
+      },
+      {
+        "rank": 23,
+        "accountid": "哔哩哔哩丶禾禾只",
+        "rating": 5.96
+      },
+      {
+        "rank": 24,
+        "accountid": "Doolly",
+        "rating": 5.95
+      },
+      {
+        "rank": 25,
+        "accountid": "FallWind",
+        "rating": 5.92
+      }
+    ],
+    "columns": [
+      "rank",
+      "accountid",
+      "rating"
+    ],
+    "pagination": {
+      "totalPages": 455,
+      "totalSize": 11360
+    }
+  },
+  "regions": {
+    "US": 1,
+    "EU": 2,
+    "AP": 3
+  },
+  "region": "AP"
+}

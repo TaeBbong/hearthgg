@@ -1,0 +1,17 @@
+{
+  "seasonId": 156,
+  "leaderboard": {
+    "columns": [],
+    "rows": [],
+    "pagination": {
+      "totalPages": 0,
+      "totalSize": 0
+    }
+  },
+  "regions": {
+    "US": 1,
+    "EU": 2,
+    "AP": 3
+  },
+  "region": "AP"
+}

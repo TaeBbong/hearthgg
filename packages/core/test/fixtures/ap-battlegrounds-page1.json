@@ -1,0 +1,147 @@
+{
+  "seasonId": 19,
+  "leaderboard": {
+    "rows": [
+      {
+        "rank": 1,
+        "accountid": "Alutemu",
+        "rating": 18114
+      },
+      {
+        "rank": 2,
+        "accountid": "KasuganoSora",
+        "rating": 17601
+      },
+      {
+        "rank": 3,
+        "accountid": "Returns",
+        "rating": 16764
+      },
+      {
+        "rank": 4,
+        "accountid": "Barrette",
+        "rating": 16642
+      },
+      {
+        "rank": 5,
+        "accountid": "gaiabot",
+        "rating": 16492
+      },
+      {
+        "rank": 6,
+        "accountid": "jsumin786h",
+        "rating": 16143
+      },
+      {
+        "rank": 7,
+        "accountid": "あれっくす",
+        "rating": 16085
+      },
+      {
+        "rank": 8,
+        "accountid": "코코스",
+        "rating": 15924
+      },
+      {
+        "rank": 9,
+        "accountid": "DuckDragon",
+        "rating": 15907
+      },
+      {
+        "rank": 10,
+        "accountid": "haguren",
+        "rating": 15891
+      },
+      {
+        "rank": 11,
+        "accountid": "ぎゃん",
+        "rating": 15883
+      },
+      {
+        "rank": 12,
+        "accountid": "SeseiSei",
+        "rating": 15651
+      },
+      {
+        "rank": 13,
+        "accountid": "MATSURI",
+        "rating": 15521
+      },
+      {
+        "rank": 14,
+        "accountid": "hsmt",
+        "rating": 15376
+      },
+      {
+        "rank": 15,
+        "accountid": "Yoshiyuki",
+        "rating": 15209
+      },
+      {
+        "rank": 16,
+        "accountid": "Thundurus",
+        "rating": 15189
+      },
+      {
+        "rank": 17,
+        "accountid": "pqp",
+        "rating": 15183
+      },
+      {
+        "rank": 18,
+        "accountid": "Aioisp",
+        "rating": 15162
+      },
+      {
+        "rank": 19,
+        "accountid": "綜合水果武士",
+        "rating": 14594
+      },
+      {
+        "rank": 20,
+        "accountid": "리바푸사",
+        "rating": 14591
+      },
+      {
+        "rank": 21,
+        "accountid": "메롱군주킹족이",
+        "rating": 14335
+      },
+      {
+        "rank": 22,
+        "accountid": "岡野佳",
+        "rating": 14316
+      },
+      {
+        "rank": 23,
+        "accountid": "pon",
+        "rating": 14275
+      },
+      {
+        "rank": 24,
+        "accountid": "大頭皮",
+        "rating": 14165
+      },
+      {
+        "rank": 25,
+        "accountid": "integer",
+        "rating": 14145
+      }
+    ],
+    "columns": [
+      "rank",
+      "accountid",
+      "rating"
+    ],
+    "pagination": {
+      "totalPages": 66,
+      "totalSize": 1648
+    }
+  },
+  "regions": {
+    "US": 1,
+    "EU": 2,
+    "AP": 3
+  },
+  "region": "AP"
+}
