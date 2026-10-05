@@ -1,0 +1,131 @@
+import { serializeSnapshot, type Snapshot } from "@hearthgg/core";
+import { describe, expect, it, vi } from "vitest";
+import { LeaderboardService, type ServiceCaches } from "./leaderboard-service";
+import type { BoardPointer, LeaderboardStore } from "./store";
+import { TtlLru } from "./lru";
+
+const NOW = Date.UTC(2026, 9, 5, 12);
+
+function snapshot(region: Snapshot["region"], mode: Snapshot["mode"], seasonId: number, names: string[]): Snapshot {
+  return {
+    v: 1,
+    region,
+    mode,
+    seasonId,
+    generatedAt: NOW - 60_000,
+    totalSize: names.length,
+    rows: names.map((name, index) => [index + 1, name, mode === "arena" ? 7 - index / 10 : null]),
+  };
+}
+
+function pointer(s: Snapshot, isCurrent = true): BoardPointer {
+  return {
+    region: s.region,
+    mode: s.mode,
+    seasonId: s.seasonId,
+    isCurrent,
+    snapshotKey: `snapshots/${s.region}/${s.mode}/${s.seasonId}/${s.generatedAt}.json`,
+    generatedAt: s.generatedAt,
+    totalSize: s.totalSize,
+    lastSuccessAt: NOW - 30_000,
+    lastError: null,
+    consecutiveFailures: 0,
+  };
+}
+
+function setup() {
+  const apArena = snapshot("AP", "arena", 56, ["Sinah", "Other", ...Array.from({ length: 30 }, (_, i) => `p${i}`)]);
+  const apArenaPast = snapshot("AP", "arena", 55, ["OldChamp", "Sinah"]);
+  const euStandard = snapshot("EU", "standard", 156, ["sinahfan", "SINAH", "x"]);
+  const snapshots = [apArena, apArenaPast, euStandard];
+  const pointers = [pointer(apArena), pointer(apArenaPast, false), pointer(euStandard)];
+
+  const store: LeaderboardStore = {
+    listBoards: vi.fn(async () => pointers),
+    readSnapshot: vi.fn(async (key: string) => {
+      const found = snapshots.find((s) => pointer(s).snapshotKey === key);
+      return found ? serializeSnapshot(found) : null;
+    }),
+  };
+  const caches: ServiceCaches = {
+    pointers: new TtlLru({ maxEntries: 1, ttlMs: 30_000 }),
+    indexes: new TtlLru({ maxEntries: 10 }),
+  };
+  let now = NOW;
+  const service = new LeaderboardService(store, caches, () => now);
+  return { service, store, pointers, advance: (ms: number) => (now += ms) };
+}
+
+describe("LeaderboardService", () => {
+  it("searches current seasons of every board", async () => {
+    const { service } = setup();
+    const result = await service.search("sinah");
+    expect(result.total).toBe(3);
+    expect(result.hits.map((hit) => [hit.region, hit.mode, hit.seasonId, hit.accountId])).toEqual([
+      ["AP", "arena", 56, "Sinah"],
+      ["EU", "standard", 156, "SINAH"],
+      ["EU", "standard", 156, "sinahfan"],
+    ]);
+  });
+
+  it("parses each immutable snapshot once across calls", async () => {
+    const { service, store } = setup();
+    await service.search("a");
+    await service.search("b");
+    expect(store.readSnapshot).toHaveBeenCalledTimes(2); // two current boards
+  });
+
+  it("re-reads board pointers after their short ttl", async () => {
+    const { service, store, advance } = setup();
+    await service.search("a");
+    advance(10_000);
+    await service.search("a");
+    expect(store.listBoards).toHaveBeenCalledTimes(1);
+    advance(30_000);
+    await service.search("a");
+    expect(store.listBoards).toHaveBeenCalledTimes(2);
+  });
+
+  it("serves one leaderboard page with season navigation", async () => {
+    const { service } = setup();
+    const page = await service.leaderboard({ region: "AP", mode: "arena" }, undefined, 2);
+    expect(page).toMatchObject({ seasonId: 56, page: 2, totalPages: 2, seasons: [56, 55] });
+    expect(page?.rows[0]?.[0]).toBe(26);
+  });
+
+  it("serves a past season by id and returns null for unknown ones", async () => {
+    const { service } = setup();
+    expect((await service.leaderboard({ region: "AP", mode: "arena" }, 55, 1))?.rows[0]?.[1]).toBe("OldChamp");
+    expect(await service.leaderboard({ region: "AP", mode: "arena" }, 1, 1)).toBeNull();
+    expect(await service.leaderboard({ region: "US", mode: "wild" }, undefined, 1)).toBeNull();
+  });
+
+  it("finds a player, including namesakes and their other boards", async () => {
+    const { service } = setup();
+    const player = await service.player({ region: "AP", mode: "arena" }, 56, "SINAH");
+    expect(player?.entries.map(([rank]) => rank)).toEqual([1]);
+    expect(player?.displayName).toBe("Sinah");
+    expect(player?.otherBoards.map((hit) => [hit.region, hit.mode])).toEqual([["EU", "standard"]]);
+  });
+
+  it("returns a player page shell even when the name is not ranked", async () => {
+    const { service } = setup();
+    const player = await service.player({ region: "AP", mode: "arena" }, 56, "nobody");
+    expect(player).toMatchObject({ entries: [], displayName: "nobody" });
+  });
+
+  it("summarizes each current board with its top rows", async () => {
+    const { service } = setup();
+    const overview = await service.overview(2);
+    expect(overview.map((o) => [o.pointer.region, o.pointer.mode, o.top.map(([, name]) => name)])).toEqual([
+      ["AP", "arena", ["Sinah", "Other"]],
+      ["EU", "standard", ["sinahfan", "SINAH"]],
+    ]);
+  });
+
+  it("lists board status for the current seasons", async () => {
+    const { service } = setup();
+    const status = await service.status();
+    expect(status.map((s) => `${s.region}:${s.mode}`)).toEqual(["AP:arena", "EU:standard"]);
+  });
+});
