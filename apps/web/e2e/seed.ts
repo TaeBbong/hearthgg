@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { parseLeaderboardPage, type LeaderboardPage } from "@hearthgg/core/blizzard";
 import { assembleSnapshot, serializeSnapshot, snapshotKey, type Snapshot } from "@hearthgg/core/snapshot";
@@ -8,6 +8,7 @@ export const E2E_STATE_DIR = path.resolve(__dirname, "../.wrangler/e2e-state");
 export const GENERATED_AT = Date.UTC(2026, 9, 5, 6, 0);
 
 const root = path.resolve(__dirname, "../../..");
+const HISTORY_DAYS = ["2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05"];
 
 function synthetic(region: Snapshot["region"], mode: Snapshot["mode"], seasonId: number, names: string[]): Snapshot {
   return {
@@ -51,10 +52,15 @@ export async function seed() {
   });
   try {
     const { DB, SNAPSHOTS } = proxy.env;
-    const schema = await readFile(path.join(root, "migrations/0001_boards.sql"), "utf8");
-    await DB.exec("DROP TABLE IF EXISTS boards");
-    for (const statement of schema.split(";").map((s) => s.replace(/--.*$/gm, "").trim()).filter(Boolean)) {
-      await DB.prepare(statement).run();
+    for (const table of ["boards", "rank_history", "history_days"]) await DB.exec(`DROP TABLE IF EXISTS ${table}`);
+    const migrations = (await readdir(path.join(root, "migrations"))).filter((file) => file.endsWith(".sql")).toSorted();
+    for (const file of migrations) {
+      const sql = await readFile(path.join(root, "migrations", file), "utf8");
+      // Strip comments before splitting: they may contain semicolons.
+      const statements = sql.replace(/--.*$/gm, "").split(";").map((s) => s.trim()).filter(Boolean);
+      for (const statement of statements) {
+        await DB.prepare(statement).run();
+      }
     }
 
     for (const { snapshot, isCurrent } of await snapshots()) {
@@ -67,6 +73,17 @@ export async function seed() {
         .bind(snapshot.region, snapshot.mode, snapshot.seasonId, isCurrent ? 1 : 0, key, GENERATED_AT, snapshot.totalSize, GENERATED_AT)
         .run();
     }
+
+    // Five days of closing ranks for the two AP arena "sinah" namesakes.
+    const history = DB.prepare(
+      "INSERT INTO rank_history (region, mode, season_id, name, day, rank, rating) VALUES ('AP', 'arena', 56, 'sinah', ?, ?, ?)",
+    );
+    await DB.batch(
+      HISTORY_DAYS.flatMap((day, index) => [
+        history.bind(day, [5, 3, 2, 1, 1][index]!, 7 + index / 10),
+        history.bind(day, [40, 38, 35, 34, 33][index]!, 6 + index / 10),
+      ]),
+    );
   } finally {
     await proxy.dispose();
   }

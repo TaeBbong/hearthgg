@@ -1,4 +1,6 @@
 import { boardId, type Board } from "@hearthgg/core/domain";
+import type { HistoryPoint } from "@hearthgg/core/history";
+import { normalizeName } from "@hearthgg/core/normalize";
 import { buildSearchIndex, findExact, search, type SearchHit, type SearchIndex, type SearchResult } from "@hearthgg/core/search";
 import { deserializeSnapshot, slicePage, type SnapshotRow } from "@hearthgg/core/snapshot";
 import type { TtlLru } from "./lru";
@@ -9,6 +11,8 @@ export interface ServiceCaches {
   pointers: TtlLru<"all", BoardPointer[]>;
   /** Parsed snapshots keyed by their immutable object key, so they never go stale. */
   indexes: TtlLru<string, SearchIndex>;
+  /** Daily history only changes once a day; keyed by board, season and normalized name. */
+  history: TtlLru<string, HistoryPoint[]>;
 }
 
 export interface LeaderboardPage {
@@ -106,6 +110,16 @@ export class LeaderboardService {
   /** Current boards with their top `limit` rows, for the home page. */
   async overview(limit = 3): Promise<Array<{ pointer: BoardPointer; top: SnapshotRow[] }>> {
     return (await this.currentIndexes()).map(({ pointer, index }) => ({ pointer, top: index.snapshot.rows.slice(0, limit) }));
+  }
+
+  async history(board: Board, seasonId: number, name: string): Promise<HistoryPoint[]> {
+    const normalized = normalizeName(name);
+    const key = `${boardId(board)}:${seasonId}:${normalized}`;
+    const cached = this.caches.history.get(key, this.now());
+    if (cached) return cached;
+    const points = await this.store.readHistory(board, seasonId, normalized);
+    this.caches.history.set(key, points, this.now());
+    return points;
   }
 
   async status(): Promise<BoardPointer[]> {

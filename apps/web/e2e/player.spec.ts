@@ -5,8 +5,9 @@ test.describe("player", () => {
     await page.goto("/ap/arena/56/sinah");
     await expect(page.getByRole("heading", { level: 1, name: "Sinah" })).toBeVisible();
     await expect(page.getByText("같은 이름의 플레이어가 이 리더보드에 2명 있습니다")).toBeVisible();
-    await expect(page.getByText("#1", { exact: true })).toBeVisible();
-    await expect(page.getByText("#33", { exact: true })).toBeVisible();
+    const stats = page.getByRole("definition");
+    await expect(stats.filter({ hasText: /^#1$/ })).toBeVisible();
+    await expect(stats.filter({ hasText: /^#33$/ })).toBeVisible();
     await expect(page.getByText("8.00")).toBeVisible();
   });
 

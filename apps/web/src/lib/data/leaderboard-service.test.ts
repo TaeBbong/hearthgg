@@ -42,6 +42,14 @@ function setup() {
 
   const store: LeaderboardStore = {
     listBoards: vi.fn(async () => pointers),
+    readHistory: vi.fn(async (_board, _seasonId, name: string) =>
+      name === "sinah"
+        ? [
+            { day: "2026-10-03", rank: 3, rating: 6.5 },
+            { day: "2026-10-04", rank: 1, rating: 7 },
+          ]
+        : [],
+    ),
     readSnapshot: vi.fn(async (key: string) => {
       const found = snapshots.find((s) => pointer(s).snapshotKey === key);
       return found ? serializeSnapshot(found) : null;
@@ -50,6 +58,7 @@ function setup() {
   const caches: ServiceCaches = {
     pointers: new TtlLru({ maxEntries: 1, ttlMs: 30_000 }),
     indexes: new TtlLru({ maxEntries: 10 }),
+    history: new TtlLru({ maxEntries: 10, ttlMs: 600_000 }),
   };
   let now = NOW;
   const service = new LeaderboardService(store, caches, () => now);
@@ -121,6 +130,15 @@ describe("LeaderboardService", () => {
       ["AP", "arena", ["Sinah", "Other"]],
       ["EU", "standard", ["sinahfan", "SINAH"]],
     ]);
+  });
+
+  it("reads a player's daily history by normalized name and caches it", async () => {
+    const { service, store } = setup();
+    const board = { region: "AP", mode: "arena" } as const;
+    expect(await service.history(board, 56, "SINAH")).toHaveLength(2);
+    await service.history(board, 56, "Sinah");
+    expect(store.readHistory).toHaveBeenCalledTimes(1);
+    expect(store.readHistory).toHaveBeenCalledWith(board, 56, "sinah");
   });
 
   it("lists board status for the current seasons", async () => {

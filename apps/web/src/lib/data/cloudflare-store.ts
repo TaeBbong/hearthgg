@@ -1,5 +1,6 @@
 import "server-only";
-import type { Mode, Region } from "@hearthgg/core/domain";
+import type { Board, Mode, Region } from "@hearthgg/core/domain";
+import type { HistoryPoint } from "@hearthgg/core/history";
 import type { BoardPointer, LeaderboardStore } from "./store";
 
 interface BoardRow {
@@ -44,6 +45,18 @@ export class CloudflareStore implements LeaderboardStore {
       lastError: row.last_error,
       consecutiveFailures: row.consecutive_failures,
     }));
+  }
+
+  async readHistory({ region, mode }: Board, seasonId: number, normalizedName: string): Promise<HistoryPoint[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT day, rank, rating FROM rank_history
+         WHERE region = ? AND mode = ? AND season_id = ? AND name = ?
+         ORDER BY day, rank`,
+      )
+      .bind(region, mode, seasonId, normalizedName)
+      .all<HistoryPoint>();
+    return results;
   }
 
   async readSnapshot(key: string): Promise<string | null> {

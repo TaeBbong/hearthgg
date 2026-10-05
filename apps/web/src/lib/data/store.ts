@@ -1,4 +1,5 @@
-import type { Mode, Region } from "@hearthgg/core/domain";
+import type { Board, Mode, Region } from "@hearthgg/core/domain";
+import type { HistoryPoint } from "@hearthgg/core/history";
 
 /** Read model of a crawled board, as published by the crawler. */
 export interface BoardPointer {
@@ -18,4 +19,6 @@ export interface BoardPointer {
 export interface LeaderboardStore {
   listBoards(): Promise<BoardPointer[]>;
   readSnapshot(key: string): Promise<string | null>;
+  /** Daily closing ranks for a normalized name; several per day when namesakes exist. */
+  readHistory(board: Board, seasonId: number, normalizedName: string): Promise<HistoryPoint[]>;
 }

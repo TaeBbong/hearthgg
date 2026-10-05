@@ -12,6 +12,7 @@ import { TtlLru } from "./lru";
 const caches: ServiceCaches = {
   pointers: new TtlLru({ maxEntries: 1, ttlMs: 30_000 }),
   indexes: new TtlLru({ maxEntries: 24 }),
+  history: new TtlLru({ maxEntries: 500, ttlMs: 10 * 60_000 }),
 };
 
 const getService = cache(async () => {
@@ -30,6 +31,10 @@ export const getLeaderboard = cache(async (region: Region, mode: Mode, seasonId:
 
 export const getPlayer = cache(async (region: Region, mode: Mode, seasonId: number, name: string) =>
   (await getService()).player({ region, mode }, seasonId, name),
+);
+
+export const getHistory = cache(async (region: Region, mode: Mode, seasonId: number, name: string) =>
+  (await getService()).history({ region, mode }, seasonId, name),
 );
 
 export const getOverview = cache(async () => (await getService()).overview(3));

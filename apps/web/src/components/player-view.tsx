@@ -1,13 +1,14 @@
 import { pageOfRank, type Board } from "@hearthgg/core/domain";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { getPlayer } from "@/lib/data/queries";
 import { formatRating, topPercent } from "@/lib/format";
 import { MODE_LABEL, RATING_LABEL, REGION_LABEL, seasonLabel } from "@/lib/labels";
 import { blizzardLeaderboardUrl, boardHref, playerHref } from "@/lib/routes";
 import { ModeBadge, RankChip, RegionBadge } from "./badges";
 import { Card, CardHeader, EmptyState, SkeletonRows } from "./card";
+import { PlayerHistory, PlayerHistorySkeleton } from "./player-history";
 import { RelativeTime } from "./relative-time";
 
 function Stat({ label, children }: { label: string; children: ReactNode }) {
@@ -19,7 +20,7 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export async function PlayerView({ board, seasonId, name, history }: { board: Board; seasonId: number; name: string; history?: ReactNode }) {
+export async function PlayerView({ board, seasonId, name }: { board: Board; seasonId: number; name: string }) {
   const player = await getPlayer(board.region, board.mode, seasonId, name);
   if (!player) notFound();
 
@@ -90,7 +91,12 @@ export async function PlayerView({ board, seasonId, name, history }: { board: Bo
         )}
       </Card>
 
-      {history}
+      {entries.length > 0 ? (
+        // Streams separately so the profile shows before the history query finishes.
+        <Suspense fallback={<PlayerHistorySkeleton />}>
+          <PlayerHistory board={board} seasonId={seasonId} name={name} entries={entries} />
+        </Suspense>
+      ) : null}
 
       <Card>
         <CardHeader>
