@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OpenNext / Wrangler
+/.open-next/
+/.wrangler/
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/

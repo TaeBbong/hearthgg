@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hearthgg-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    // Self-reference used by OpenNext for cache revalidation (https://opennext.js.org/cloudflare/caching)
+    { "binding": "WORKER_SELF_REFERENCE", "service": "hearthgg-web" }
+  ],
+  "r2_buckets": [
+    { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "hearthgg-web-opennext-cache" },
+    // Written by the crawler; read-only here.
+    { "binding": "SNAPSHOTS", "bucket_name": "hearthgg-snapshots" }
+  ],
+  "d1_databases": [
+    // Same database as the crawler (migrations live in /migrations and are applied from apps/crawler).
+    { "binding": "DB", "database_name": "hearthgg", "database_id": "00000000-0000-4000-8000-000000000000" }
+  ]
+}
