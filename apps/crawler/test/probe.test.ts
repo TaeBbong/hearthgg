@@ -14,7 +14,14 @@ function setup(blizzard = createFakeBlizzard({ "AP:arena": { seasonId: 56, names
   const startCrawl = vi.fn(async (params: CrawlParams) => {
     started.push(params);
   });
-  const deps = { db: env.DB, fetch: blizzard.fetch, startCrawl, now: () => NOW, sleep: async () => {} };
+  const deps = {
+    db: env.DB,
+    fetch: blizzard.fetch,
+    startCrawl,
+    now: () => NOW,
+    sleep: async () => {},
+    maxConcurrentCrawls: BOARDS.length,
+  };
   return { blizzard, started, startCrawl, deps, store: new BoardStore(env.DB) };
 }
 
@@ -88,6 +95,40 @@ describe("runProbeCycle", () => {
     const outcomes = await runProbeCycle({ ...deps, now: () => NOW + 60 * 60_000 });
     expect(outcomes.every((o) => o.action === "failed")).toBe(true);
     expect((await store.getCurrent(ap))?.consecutiveFailures).toBe(1);
+  });
+
+  it("caps crawls in flight across boards and defers the rest to a later tick", async () => {
+    const { started, deps } = setup();
+    const outcomes = await runProbeCycle({ ...deps, maxConcurrentCrawls: 4 });
+    expect(started).toHaveLength(4);
+    expect(outcomes.filter((o) => o.action === "deferred")).toHaveLength(BOARDS.length - 4);
+
+    // The four runs above still hold their locks, so nothing else may start yet.
+    started.length = 0;
+    await runProbeCycle({ ...deps, maxConcurrentCrawls: 4, now: () => NOW + 5 * 60_000 });
+    expect(started).toHaveLength(0);
+  });
+
+  it("gives the budget to unpublished boards first, then to the stalest", async () => {
+    const { started, deps, store } = setup(
+      createFakeBlizzard({
+        "AP:arena": { seasonId: 56, names: names(60) },
+        "EU:arena": { seasonId: 56, names: names(60) },
+      }),
+    );
+    // Publish everything except EU:arena; AP:arena is the oldest publication.
+    await runProbeCycle(deps);
+    for (const params of started) {
+      if (params.region === "EU" && params.mode === "arena") continue;
+      const age = params.region === "AP" && params.mode === "arena" ? 3 : 1;
+      const board = { region: params.region, mode: params.mode };
+      await store.publish(board, params.seasonId, params.runId, { snapshotKey: "k", generatedAt: NOW, totalSize: 0, fingerprint: "old" }, NOW - age * 60 * 60_000);
+    }
+    await store.releaseLock({ region: "EU", mode: "arena" }, 56, started.find((p) => p.region === "EU" && p.mode === "arena")!.runId);
+    started.length = 0;
+
+    await runProbeCycle({ ...deps, maxConcurrentCrawls: 2 });
+    expect(started.map((p) => `${p.region}:${p.mode}`)).toEqual(["EU:arena", "AP:arena"]);
   });
 
   it("releases the lock when the workflow cannot be started", async () => {

@@ -129,6 +129,15 @@ export class BoardStore {
     return row?.lock_run_id === runId;
   }
 
+  /** Crawls currently holding an unexpired lease, across all boards. */
+  async countActiveLocks(now: number): Promise<number> {
+    const row = await this.db
+      .prepare("SELECT COUNT(*) AS active FROM boards WHERE lock_run_id IS NOT NULL AND lock_expires_at >= ?")
+      .bind(now)
+      .first<{ active: number }>();
+    return row?.active ?? 0;
+  }
+
   async releaseLock({ region, mode }: Board, seasonId: number, runId: string): Promise<void> {
     await this.db
       .prepare(
