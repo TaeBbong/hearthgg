@@ -39,4 +39,6 @@ export const getHistory = cache(async (region: Region, mode: Mode, seasonId: num
 
 export const getOverview = cache(async () => (await getService()).overview(3));
 
+export const getUpstreamBlock = cache(async () => (await getService()).upstreamBlockedUntil());
+
 export const getBoardStatus = cache(async () => (await getService()).status());

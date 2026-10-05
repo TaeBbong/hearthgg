@@ -1,11 +1,12 @@
 import { boardId } from "@hearthgg/core/domain";
-import { getBoardStatus } from "@/lib/data/queries";
+import { getBoardStatus, getUpstreamBlock } from "@/lib/data/queries";
 
 /** Machine-readable crawl health for uptime checks. */
 export async function GET() {
-  const boards = await getBoardStatus();
+  const [boards, upstreamBlockedUntil] = await Promise.all([getBoardStatus(), getUpstreamBlock()]);
   return Response.json(
     {
+      upstreamBlockedUntil,
       boards: boards.map((board) => ({
         board: boardId(board),
         seasonId: board.seasonId,

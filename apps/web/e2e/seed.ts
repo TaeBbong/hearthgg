@@ -52,7 +52,7 @@ export async function seed() {
   });
   try {
     const { DB, SNAPSHOTS } = proxy.env;
-    for (const table of ["boards", "rank_history", "history_days"]) await DB.exec(`DROP TABLE IF EXISTS ${table}`);
+    for (const table of ["boards", "rank_history", "history_days", "upstream_state"]) await DB.exec(`DROP TABLE IF EXISTS ${table}`);
     const migrations = (await readdir(path.join(root, "migrations"))).filter((file) => file.endsWith(".sql")).toSorted();
     for (const file of migrations) {
       const sql = await readFile(path.join(root, "migrations", file), "utf8");

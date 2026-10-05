@@ -3,6 +3,7 @@ import {
   boardId,
   decideCrawl,
   fetchLeaderboardPage,
+  isUpstreamBlock,
   mapWithConcurrency,
   pageFingerprint,
   type Board,
@@ -11,15 +12,17 @@ import {
 } from "@hearthgg/core";
 import { BoardStore } from "./board-store";
 import { ALERT_AFTER_FAILURES, type CrawlParams } from "./crawl";
+import { BLOCK_COOLDOWN_MS, UpstreamGuard } from "./upstream-guard";
 
 /** Upper bound for one crawl; a crashed run's lock frees itself after this. */
 export const LOCK_LEASE_MS = 30 * 60_000;
 
 /**
  * Crawls allowed in flight across all boards. Each crawl keeps a few upstream
- * requests open, so this is what bounds total load on Blizzard.
+ * requests open (3 by default), so this bounds total load on Blizzard: bursts
+ * of ~90 parallel requests got answered with 403s.
  */
-export const MAX_CONCURRENT_CRAWLS = 3;
+export const MAX_CONCURRENT_CRAWLS = 2;
 
 export interface ProbeDeps {
   db: D1Database;
@@ -62,6 +65,12 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
   const fetchDeps = { fetch: deps.fetch, sleep: deps.sleep };
   const outcomes = new Map<BoardId, ProbeOutcome>();
   const candidates: Candidate[] = [];
+  const guard = new UpstreamGuard(deps.db);
+  const skippedAll = (): ProbeOutcome[] =>
+    BOARDS.map((board) => outcomes.get(boardId(board)) ?? { board: boardId(board), action: "skipped", reason: "upstream-blocked" });
+
+  if (await guard.blockedUntil(now)) return skippedAll();
+  let blocked = false;
 
   async function fail(board: Board, seasonId: number | undefined, error: unknown) {
     const id = boardId(board);
@@ -77,6 +86,7 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
   }
 
   async function probe(board: Board) {
+    if (blocked) return;
     let seasonId: number | undefined;
     try {
       const page = await fetchLeaderboardPage({ ...board, page: 1 }, fetchDeps);
@@ -110,12 +120,21 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
       }
       candidates.push({ board, seasonId, page, fingerprint, reason: decision.reason, priority: row?.lastSuccessAt ?? 0, final: false });
     } catch (error) {
+      if (isUpstreamBlock(error)) {
+        blocked = true;
+        if (await guard.trip(now, (error as Error).message)) {
+          await deps.alert?.(
+            `[hearthgg] Blizzard is blocking requests (${(error as Error).message}); pausing all crawls for ${BLOCK_COOLDOWN_MS / 60_000} minutes`,
+          );
+        }
+      }
       await fail(board, seasonId, error);
     }
   }
 
   // Keep upstream concurrency low; the probe runs every few minutes.
-  await mapWithConcurrency(BOARDS, deps.concurrency ?? 4, probe);
+  await mapWithConcurrency(BOARDS, deps.concurrency ?? 2, probe);
+  if (blocked) return skippedAll();
 
   let budget = (deps.maxConcurrentCrawls ?? MAX_CONCURRENT_CRAWLS) - (await store.countActiveLocks(now));
   for (const candidate of candidates.toSorted((a, b) => a.priority - b.priority)) {

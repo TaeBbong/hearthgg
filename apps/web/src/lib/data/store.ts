@@ -21,4 +21,6 @@ export interface LeaderboardStore {
   readSnapshot(key: string): Promise<string | null>;
   /** Daily closing ranks for a normalized name; several per day when namesakes exist. */
   readHistory(board: Board, seasonId: number, normalizedName: string): Promise<HistoryPoint[]>;
+  /** End of the crawler's upstream block (epoch ms) if it is still in effect at `now`. */
+  readUpstreamBlock(now: number): Promise<number | null>;
 }

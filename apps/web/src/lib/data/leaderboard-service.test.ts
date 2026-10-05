@@ -42,6 +42,7 @@ function setup() {
 
   const store: LeaderboardStore = {
     listBoards: vi.fn(async () => pointers),
+    readUpstreamBlock: vi.fn(async (now: number) => (now < NOW + 60_000 ? NOW + 60_000 : null)),
     readHistory: vi.fn(async (_board, _seasonId, name: string) =>
       name === "sinah"
         ? [
@@ -139,6 +140,13 @@ describe("LeaderboardService", () => {
     await service.history(board, 56, "Sinah");
     expect(store.readHistory).toHaveBeenCalledTimes(1);
     expect(store.readHistory).toHaveBeenCalledWith(board, 56, "sinah");
+  });
+
+  it("reports while the crawler is paused by an upstream block", async () => {
+    const { service, advance } = setup();
+    expect(await service.upstreamBlockedUntil()).toBe(NOW + 60_000);
+    advance(120_000);
+    expect(await service.upstreamBlockedUntil()).toBeNull();
   });
 
   it("lists board status for the current seasons", async () => {

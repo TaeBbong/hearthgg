@@ -3,6 +3,7 @@ import { deserializeSnapshot } from "@hearthgg/core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BoardStore } from "../src/board-store";
 import { runCrawl, type CrawlParams, type CrawlStep } from "../src/crawl";
+import { UpstreamGuard } from "../src/upstream-guard";
 import { createFakeBlizzard, names } from "./fake-blizzard";
 
 const NOW = Date.UTC(2026, 9, 5, 12);
@@ -108,6 +109,28 @@ describe("runCrawl", () => {
     expect(await store.getCurrent(board)).toMatchObject({ consecutiveFailures: 3, lockRunId: null });
     expect(alert).toHaveBeenCalledOnce();
     expect(alert.mock.calls[0]?.[0]).toMatch(/AP:wild/);
+  });
+
+  it("trips the global breaker on a 403 and alerts about the block, not the board", async () => {
+    await prepare();
+    blizzard.failAll(403);
+    const alerts: string[] = [];
+    const deps = { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW, alert: async (m: string) => void alerts.push(m) };
+
+    await expect(runCrawl(params(), inlineStep().step, deps)).rejects.toThrow(/403/);
+    expect(await new UpstreamGuard(env.DB).blockedUntil(NOW)).not.toBeNull();
+    expect(alerts).toEqual([expect.stringMatching(/Blizzard.*403/)]);
+  });
+
+  it("aborts without requests while the breaker is open", async () => {
+    const store = await prepare();
+    await new UpstreamGuard(env.DB).trip(NOW - 60_000, "403");
+
+    await expect(
+      runCrawl(params(), inlineStep().step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW }),
+    ).rejects.toThrow(/blocked/);
+    expect(blizzard.requests).toHaveLength(0);
+    expect((await store.getCurrent(board))?.lockRunId).toBeNull();
   });
 
   it("rejects an inconsistent crawl without publishing", async () => {

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { BoardStore } from "../src/board-store";
 import type { CrawlParams } from "../src/crawl";
 import { runProbeCycle } from "../src/probe";
+import { UpstreamGuard } from "../src/upstream-guard";
 import { createFakeBlizzard, names } from "./fake-blizzard";
 
 const NOW = Date.UTC(2026, 9, 5, 12);
@@ -129,6 +130,31 @@ describe("runProbeCycle", () => {
 
     await runProbeCycle({ ...deps, maxConcurrentCrawls: 2 });
     expect(started.map((p) => `${p.region}:${p.mode}`)).toEqual(["EU:arena", "AP:arena"]);
+  });
+
+  it("sends no requests while the upstream breaker is open", async () => {
+    const { blizzard, started, deps } = setup();
+    await new UpstreamGuard(env.DB).trip(NOW - 60_000, "403");
+
+    const outcomes = await runProbeCycle(deps);
+    expect(blizzard.requests).toHaveLength(0);
+    expect(started).toHaveLength(0);
+    expect(outcomes.every((o) => o.action === "skipped" && o.reason === "upstream-blocked")).toBe(true);
+  });
+
+  it("trips the breaker on a 403, stops probing other boards and alerts once", async () => {
+    const { blizzard, deps } = setup();
+    blizzard.failAll(403);
+    const alerts: string[] = [];
+
+    const outcomes = await runProbeCycle({ ...deps, concurrency: 1, alert: async (message) => void alerts.push(message) });
+
+    expect(blizzard.requests).toHaveLength(1);
+    expect(outcomes.filter((o) => o.action === "failed")).toHaveLength(1);
+    expect(outcomes.filter((o) => o.reason === "upstream-blocked")).toHaveLength(BOARDS.length - 1);
+    expect(await new UpstreamGuard(env.DB).blockedUntil(NOW)).not.toBeNull();
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatch(/403/);
   });
 
   it("releases the lock when the workflow cannot be started", async () => {

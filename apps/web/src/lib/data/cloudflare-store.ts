@@ -59,6 +59,14 @@ export class CloudflareStore implements LeaderboardStore {
     return results;
   }
 
+  async readUpstreamBlock(now: number): Promise<number | null> {
+    const row = await this.db
+      .prepare("SELECT blocked_until FROM upstream_state WHERE id = 1 AND blocked_until > ?")
+      .bind(now)
+      .first<{ blocked_until: number }>();
+    return row?.blocked_until ?? null;
+  }
+
   async readSnapshot(key: string): Promise<string | null> {
     const object = await this.bucket.get(key);
     return object ? object.text() : null;

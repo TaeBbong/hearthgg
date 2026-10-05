@@ -122,6 +122,10 @@ export class LeaderboardService {
     return points;
   }
 
+  async upstreamBlockedUntil(): Promise<number | null> {
+    return this.store.readUpstreamBlock(this.now());
+  }
+
   async status(): Promise<BoardPointer[]> {
     return (await this.boards()).filter((pointer) => pointer.isCurrent);
   }

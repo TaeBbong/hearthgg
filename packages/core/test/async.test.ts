@@ -32,6 +32,23 @@ describe("mapWithConcurrency", () => {
   });
 });
 
+describe("mapWithConcurrency after a failure", () => {
+  it("stops starting new tasks once one has failed", async () => {
+    const started: number[] = [];
+    await expect(
+      mapWithConcurrency(Array.from({ length: 20 }, (_, i) => i), 2, async (n) => {
+        started.push(n);
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        if (n === 1) throw new Error("blocked");
+        return n;
+      }),
+    ).rejects.toThrow("blocked");
+    // Give any still-running worker time to (wrongly) pick up more items.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(started.length).toBeLessThanOrEqual(3);
+  });
+});
+
 describe("chunk", () => {
   it("splits into fixed-size groups", () => {
     expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);

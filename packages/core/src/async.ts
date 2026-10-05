@@ -1,4 +1,7 @@
-/** Like Promise.all over `items.map(fn)`, but with at most `limit` tasks in flight. */
+/**
+ * Like Promise.all over `items.map(fn)`, but with at most `limit` tasks in
+ * flight. After the first failure no new task starts (in-flight ones finish).
+ */
 export async function mapWithConcurrency<T, R>(
   items: readonly T[],
   limit: number,
@@ -6,11 +9,17 @@ export async function mapWithConcurrency<T, R>(
 ): Promise<R[]> {
   const results = new Array<R>(items.length);
   let next = 0;
+  let failed = false;
 
   async function worker() {
-    while (next < items.length) {
+    while (!failed && next < items.length) {
       const index = next++;
-      results[index] = await fn(items[index]!, index);
+      try {
+        results[index] = await fn(items[index]!, index);
+      } catch (error) {
+        failed = true;
+        throw error;
+      }
     }
   }
 

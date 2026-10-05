@@ -50,6 +50,11 @@ export class UpstreamError extends Error {
   }
 }
 
+/** 403 (WAF) and 429 mean Blizzard wants us to stop, not that one page failed. */
+export function isUpstreamBlock(error: unknown): boolean {
+  return error instanceof UpstreamError && (error.status === 403 || error.status === 429);
+}
+
 const responseSchema = z.object({
   seasonId: z.number().int(),
   leaderboard: z.object({

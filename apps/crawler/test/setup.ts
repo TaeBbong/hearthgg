@@ -9,6 +9,7 @@ beforeEach(async () => {
     env.DB.prepare("DELETE FROM boards"),
     env.DB.prepare("DELETE FROM rank_history"),
     env.DB.prepare("DELETE FROM history_days"),
+    env.DB.prepare("DELETE FROM upstream_state"),
   ]);
   const { objects } = await env.SNAPSHOTS.list();
   if (objects.length) await env.SNAPSHOTS.delete(objects.map((object) => object.key));

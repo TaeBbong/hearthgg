@@ -3,11 +3,22 @@ import { Suspense } from "react";
 import { ModeBadge, RegionBadge } from "@/components/badges";
 import { Card, CardHeader, EmptyState, SkeletonRows } from "@/components/card";
 import { RelativeTime } from "@/components/relative-time";
-import { getBoardStatus } from "@/lib/data/queries";
-import { formatCount } from "@/lib/format";
+import { getBoardStatus, getUpstreamBlock } from "@/lib/data/queries";
+import { formatCount, formatKstDateTime } from "@/lib/format";
 import { seasonLabel } from "@/lib/labels";
 
 export const metadata: Metadata = { title: "데이터 수집 상태" };
+
+async function UpstreamNotice() {
+  const blockedUntil = await getUpstreamBlock();
+  if (!blockedUntil) return null;
+  return (
+    <p role="alert" className="border-b border-border bg-danger-soft px-4 py-2.5 text-[13px] text-danger">
+      Blizzard가 요청을 제한하고 있어 {formatKstDateTime(blockedUntil)}까지 수집을 멈췄습니다. 그동안은 마지막으로 수집한
+      데이터를 보여줍니다.
+    </p>
+  );
+}
 
 async function StatusTable() {
   const boards = await getBoardStatus();
@@ -66,6 +77,7 @@ export default function StatusPage() {
           <span className="text-[12px] text-muted">5분마다 변경을 확인하고, 바뀐 리더보드만 다시 수집합니다.</span>
         </CardHeader>
         <Suspense fallback={<SkeletonRows rows={15} />}>
+          <UpstreamNotice />
           <StatusTable />
         </Suspense>
       </Card>
