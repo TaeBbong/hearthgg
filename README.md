@@ -42,25 +42,27 @@ Next.js 16의 `cacheComponents`는 OpenNext로 Workers 런타임에서 실행하
 
 ## 로컬 개발
 
-Node 22.12 이상과 pnpm 10이 필요합니다(`corepack enable`).
+Node 22.12 이상이면 됩니다. 패키지 관리는 Node에 포함된 npm(workspaces)을 씁니다.
 
 ```bash
-pnpm install
-pnpm --filter crawler db:migrate:local      # 공유 로컬 D1에 마이그레이션 적용
-pnpm --filter crawler dev                   # http://localhost:8787
+npm install
+npm run db:migrate:local -w crawler        # 공유 로컬 D1에 마이그레이션 적용
+npm run dev -w crawler                     # http://localhost:8787
 curl "http://localhost:8787/__scheduled?cron=*/5+*+*+*+*"   # probe 1회 실행 (실제 Blizzard 호출)
-pnpm --filter web dev                       # http://localhost:3000
+npm run dev -w web                         # http://localhost:3000
 ```
 
 crawler와 web은 같은 로컬 상태(`.wrangler/state`)를 공유하므로, 크롤된 데이터가 그대로 웹에 보입니다.
 
+> `.npmrc`의 `legacy-peer-deps=true`는 npm 11.6 미만에서 vitest 4의 optional peer를 해석하다 생기는 크래시("reading 'edgesOut'")를 피하기 위한 설정입니다. 필요한 peer는 모두 직접 선언되어 있습니다.
+
 ## 테스트
 
 ```bash
-pnpm test                                   # core + crawler(workerd) + web 단위 테스트
-pnpm --filter web exec playwright install chromium
-pnpm --filter web test:e2e                  # fixture를 시드한 격리 상태에서 E2E
-pnpm typecheck && pnpm lint
+npm test                                   # core + crawler(workerd) + web 단위 테스트
+npx playwright install chromium
+npm run test:e2e -w web                    # fixture를 시드한 격리 상태에서 E2E
+npm run typecheck && npm run lint
 ```
 
 - crawler 테스트는 `@cloudflare/vitest-pool-workers`로 실제 workerd + D1/R2에서 실행되고, Workflow는 introspection API로 검증합니다.
@@ -75,10 +77,10 @@ wrangler r2 bucket create hearthgg-web-opennext-cache
 wrangler d1 create hearthgg       # 출력된 database_id를 두 wrangler.jsonc에 반영
 
 # 마이그레이션과 배포
-pnpm --filter crawler exec wrangler d1 migrations apply hearthgg --remote
-pnpm --filter crawler exec wrangler secret put ALERT_WEBHOOK_URL   # 선택
-pnpm --filter crawler deploy
-pnpm --filter web deploy
+npm exec -w crawler -- wrangler d1 migrations apply hearthgg --remote
+npm exec -w crawler -- wrangler secret put ALERT_WEBHOOK_URL   # 선택
+npm run deploy -w crawler
+npm run deploy -w web
 ```
 
 Workflows와 분 단위 Cron을 쓰므로 Workers Paid 플랜($5/월)을 기준으로 합니다.

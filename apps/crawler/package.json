@@ -13,10 +13,12 @@
     "db:migrate:local": "wrangler d1 migrations apply hearthgg --local --persist-to ../../.wrangler/state"
   },
   "dependencies": {
-    "@hearthgg/core": "workspace:*"
+    "@hearthgg/core": "*"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "@vitest/runner": "4.1.11",
+    "@vitest/snapshot": "4.1.11",
     "typescript": "^5.9.3",
     "vitest": "4.1.11",
     "wrangler": "^4.147.0"

@@ -1,5 +1,5 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
+  "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "hearthgg-web",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-01",
