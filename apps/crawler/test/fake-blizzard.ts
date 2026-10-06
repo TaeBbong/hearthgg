@@ -14,10 +14,17 @@ export interface FakeBoard {
 export function createFakeBlizzard(boards: Partial<Record<BoardId, FakeBoard>> = {}, defaultSeasonId = 100) {
   const requests: URL[] = [];
   let failWith: number | undefined;
+  let inFlight = 0;
+  let peak = 0;
 
   const fetch: typeof globalThis.fetch = async (input) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
     requests.push(url);
+    inFlight++;
+    peak = Math.max(peak, inFlight);
+    // Yield so concurrent callers overlap and `peak` reflects real parallelism.
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    inFlight--;
     if (failWith) return new Response("upstream down", { status: failWith });
 
     const id = `${url.searchParams.get("region")}:${url.searchParams.get("leaderboardId")}` as BoardId;
@@ -49,6 +56,8 @@ export function createFakeBlizzard(boards: Partial<Record<BoardId, FakeBoard>> =
     failAll(status: number | undefined) {
       failWith = status;
     },
+    /** Most requests that were in flight at once. */
+    peak: () => peak,
   };
 }
 

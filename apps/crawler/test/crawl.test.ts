@@ -159,6 +159,19 @@ describe("runCrawl", () => {
     expect(alerts).toEqual([expect.stringMatching(/Blizzard.*403/)]);
   });
 
+  it("uses fewer parallel requests while recovering from a recent block", async () => {
+    await prepare();
+    const deps = { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW };
+    await runCrawl(params(), inlineStep().step, deps);
+    expect(blizzard.peak()).toBe(3);
+
+    const recovering = createFakeBlizzard({ "AP:wild": { seasonId: 156, names: names(120) } });
+    await new UpstreamGuard(env.DB).trip(NOW - 40 * 60_000, "403"); // 1 strike, block over
+    await new BoardStore(env.DB).acquireLock(board, 156, "run-2", NOW, 60_000);
+    await runCrawl(params({ runId: "run-2", startedAt: NOW + 1 }), inlineStep().step, { ...deps, fetch: recovering.fetch });
+    expect(recovering.peak()).toBe(1);
+  });
+
   it("aborts without requests while the breaker is open", async () => {
     const store = await prepare();
     await new UpstreamGuard(env.DB).trip(NOW - 60_000, "403");

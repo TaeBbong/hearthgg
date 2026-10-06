@@ -15,7 +15,7 @@ import { BoardStore } from "./board-store";
 import { ALERT_AFTER_FAILURES, type CrawlParams } from "./crawl";
 import { CRAWL_BATCH_PAGES, LOCK_LEASE_MS, MAX_CONCURRENT_CRAWLS, PROBE_CONCURRENCY } from "./limits";
 import { RequestBudget } from "./request-budget";
-import { BLOCK_COOLDOWN_MS, UpstreamGuard } from "./upstream-guard";
+import { UpstreamGuard, blockAlert, throttleFactor } from "./upstream-guard";
 
 export interface ProbeDeps {
   db: D1Database;
@@ -65,9 +65,12 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
   const skippedAll = (reason: string): ProbeOutcome[] =>
     BOARDS.map((board) => outcomes.get(boardId(board)) ?? { board: boardId(board), action: "skipped", reason });
 
-  if (await guard.blockedUntil(now)) return skippedAll("upstream-blocked");
+  const { blockedUntil, strikes } = await guard.status(now);
+  if (blockedUntil) return skippedAll("upstream-blocked");
+  // Recently blocked: refill the budget slower and run fewer crawls until strikes decay.
+  const throttle = throttleFactor(strikes);
   // The probe itself costs one request per board.
-  if (!(await budget.reserve(BOARDS.length, now)).granted) return skippedAll("budget");
+  if (!(await budget.reserve(BOARDS.length, now, throttle)).granted) return skippedAll("budget");
   let blocked = false;
 
   async function fail(board: Board, seasonId: number | undefined, error: unknown) {
@@ -142,11 +145,8 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
     } catch (error) {
       if (isUpstreamBlock(error)) {
         blocked = true;
-        if (await guard.trip(now, (error as Error).message)) {
-          await deps.alert?.(
-            `[hearthgg] Blizzard is blocking requests (${(error as Error).message}); pausing all crawls for ${BLOCK_COOLDOWN_MS / 60_000} minutes`,
-          );
-        }
+        const trip = await guard.trip(now, (error as Error).message);
+        if (trip.newlyBlocked) await deps.alert?.(blockAlert(trip, (error as Error).message));
       }
       await fail(board, seasonId, error);
     }
@@ -156,7 +156,8 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
   await mapWithConcurrency(BOARDS, deps.concurrency ?? PROBE_CONCURRENCY, probe);
   if (blocked) return skippedAll("upstream-blocked");
 
-  let slots = (deps.maxConcurrentCrawls ?? MAX_CONCURRENT_CRAWLS) - (await store.countActiveLocks(now));
+  const maxCrawls = Math.max(1, Math.floor((deps.maxConcurrentCrawls ?? MAX_CONCURRENT_CRAWLS) * throttle));
+  let slots = maxCrawls - (await store.countActiveLocks(now));
   // Stable sort: equally urgent candidates keep probe order (retired seasons first).
   for (const candidate of candidates.toSorted((a, b) => (b.urgency === a.urgency ? 0 : b.urgency - a.urgency))) {
     const { board, seasonId, page, fingerprint, reason, kind, pages, final } = candidate;
@@ -170,7 +171,7 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
       continue;
     }
     // Only start what can make progress now; the workflow reserves per batch as it goes.
-    if ((await budget.available(now)) < Math.min(CRAWL_BATCH_PAGES, pages)) {
+    if ((await budget.available(now, throttle)) < Math.min(CRAWL_BATCH_PAGES, pages)) {
       record({ action: "deferred", reason: "budget" });
       continue;
     }

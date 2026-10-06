@@ -157,6 +157,22 @@ describe("runProbeCycle", () => {
     expect(outcomes.every((o) => o.action === "skipped" && o.reason === "upstream-blocked")).toBe(true);
   });
 
+  it("starts fewer crawls while recovering from a recent block", async () => {
+    const { started, deps } = setup();
+    await new UpstreamGuard(env.DB).trip(NOW - 40 * 60_000, "403"); // 1 strike, block over
+    await runProbeCycle({ ...deps, maxConcurrentCrawls: 4 });
+    expect(started).toHaveLength(2);
+  });
+
+  it("does not alert again for a block that is already in effect", async () => {
+    const { blizzard, deps } = setup();
+    blizzard.failAll(403);
+    const alerts: string[] = [];
+    // Two boards hit the 403 concurrently; only the first trip is new.
+    await runProbeCycle({ ...deps, concurrency: 2, alert: async (message) => void alerts.push(message) });
+    expect(alerts).toHaveLength(1);
+  });
+
   it("trips the breaker on a 403, stops probing other boards and alerts once", async () => {
     const { blizzard, deps } = setup();
     blizzard.failAll(403);

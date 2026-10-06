@@ -20,7 +20,7 @@ import {
 import { BoardStore } from "./board-store";
 import { BUDGET_WAIT_CAP_MS, CRAWL_BATCH_PAGES, CRAWL_CONCURRENCY, LOCK_LEASE_MS, MAX_BUDGET_WAITS } from "./limits";
 import { RequestBudget } from "./request-budget";
-import { BLOCK_COOLDOWN_MS, UpstreamGuard } from "./upstream-guard";
+import { UpstreamGuard, blockAlert, throttleFactor } from "./upstream-guard";
 
 /** Consecutive failures that trigger one alert (not repeated until the board recovers). */
 export const ALERT_AFTER_FAILURES = 3;
@@ -87,9 +87,9 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
           if (!(await store.extendLock(board, seasonId, runId, now(), LOCK_LEASE_MS))) {
             throw new NonRetryableError("Crawl lock was taken over by another run");
           }
-          const blockedUntil = await guard.blockedUntil(now());
+          const { blockedUntil, strikes } = await guard.status(now());
           if (blockedUntil) throw new NonRetryableError(`Upstream blocked until ${new Date(blockedUntil).toISOString()}`);
-          return budget.reserve(batch.length, now());
+          return budget.reserve(batch.length, now(), throttleFactor(strikes));
         });
         if (reservation.granted) break;
         if (attempt > MAX_BUDGET_WAITS) throw new NonRetryableError("Request budget did not free up in time");
@@ -97,8 +97,11 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
       }
 
       const fetched = await step.do(`fetch pages ${range}`, async () => {
+        // Fewer parallel requests while recovering from a recent block.
+        const { strikes } = await guard.status(now());
+        const parallel = Math.max(1, Math.floor(concurrency * throttleFactor(strikes)));
         try {
-          return await mapWithConcurrency(batch, concurrency, async (page) => ({
+          return await mapWithConcurrency(batch, parallel, async (page) => ({
             page,
             // Pin the season: if it rolls over mid-crawl we still read one consistent season.
             data: await fetchLeaderboardPage({ region, mode, page, seasonId }, fetchDeps),
@@ -106,11 +109,8 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
         } catch (error) {
           if (!isUpstreamBlock(error)) throw error;
           // Retrying would only extend the block: stop every crawl, not just this step.
-          if (await guard.trip(now(), (error as Error).message)) {
-            await deps.alert?.(
-              `[hearthgg] Blizzard is blocking requests (${(error as Error).message}); pausing all crawls for ${BLOCK_COOLDOWN_MS / 60_000} minutes`,
-            );
-          }
+          const trip = await guard.trip(now(), (error as Error).message);
+          if (trip.newlyBlocked) await deps.alert?.(blockAlert(trip, (error as Error).message));
           throw new NonRetryableError((error as Error).message, "UpstreamBlocked");
         }
       });
