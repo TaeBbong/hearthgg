@@ -41,6 +41,11 @@ async function snapshots(): Promise<Array<{ snapshot: Snapshot; isCurrent: boole
     { snapshot: synthetic("AP", "arena", 56, ["Sinah", "Other", ...filler(30, "arena"), "sinah", ...filler(27, "late")]), isCurrent: true },
     { snapshot: synthetic("AP", "arena", 55, ["OldChamp", "Sinah"]), isCurrent: false },
     { snapshot: synthetic("EU", "standard", 156, ["SINAH", "sinahfan", ...filler(10, "eu")]), isCurrent: true },
+    // Past the top 1,000 ranks, rows come from an older full crawl.
+    {
+      snapshot: { ...synthetic("AP", "battlegrounds", 19, filler(1_100, "bg")), deepGeneratedAt: GENERATED_AT - 2 * 3_600_000 },
+      isCurrent: true,
+    },
   ];
 }
 
@@ -52,7 +57,7 @@ export async function seed() {
   });
   try {
     const { DB, SNAPSHOTS } = proxy.env;
-    for (const table of ["boards", "rank_history", "history_days", "upstream_state"]) await DB.exec(`DROP TABLE IF EXISTS ${table}`);
+    for (const table of ["boards", "rank_history", "history_days", "upstream_state", "request_budget"]) await DB.exec(`DROP TABLE IF EXISTS ${table}`);
     const migrations = (await readdir(path.join(root, "migrations"))).filter((file) => file.endsWith(".sql")).toSorted();
     for (const file of migrations) {
       const sql = await readFile(path.join(root, "migrations", file), "utf8");
@@ -67,10 +72,20 @@ export async function seed() {
       const key = snapshotKey(snapshot);
       await SNAPSHOTS.put(key, serializeSnapshot(snapshot));
       await DB.prepare(
-        `INSERT INTO boards (region, mode, season_id, is_current, snapshot_key, generated_at, total_size, last_success_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO boards (region, mode, season_id, is_current, snapshot_key, generated_at, deep_generated_at, total_size, last_success_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-        .bind(snapshot.region, snapshot.mode, snapshot.seasonId, isCurrent ? 1 : 0, key, GENERATED_AT, snapshot.totalSize, GENERATED_AT)
+        .bind(
+          snapshot.region,
+          snapshot.mode,
+          snapshot.seasonId,
+          isCurrent ? 1 : 0,
+          key,
+          GENERATED_AT,
+          snapshot.deepGeneratedAt ?? GENERATED_AT,
+          snapshot.totalSize,
+          GENERATED_AT,
+        )
         .run();
     }
 

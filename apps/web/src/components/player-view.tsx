@@ -1,4 +1,5 @@
-import { pageOfRank, type Board } from "@hearthgg/core/domain";
+import { PAGE_SIZE, pageOfRank, type Board } from "@hearthgg/core/domain";
+import { TOP_PAGES } from "@hearthgg/core/refresh";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
@@ -25,6 +26,9 @@ export async function PlayerView({ board, seasonId, name }: { board: Board; seas
   if (!player) notFound();
 
   const { pointer, entries, otherBoards, displayName } = player;
+  // A player ranked below the top pages was last read by the slower full crawl.
+  const deep = player.deepGeneratedAt !== null && (entries[0]?.[0] ?? 0) > TOP_PAGES * PAGE_SIZE;
+  const dataTime = deep ? player.deepGeneratedAt : pointer.generatedAt;
   const ratingLabel = RATING_LABEL[board.mode];
   const seasonQuery = pointer.isCurrent ? {} : { seasonId };
 
@@ -39,9 +43,9 @@ export async function PlayerView({ board, seasonId, name }: { board: Board; seas
               <span className="text-[12px] text-muted">{seasonLabel(seasonId)}</span>
             </div>
             <h1 className="break-all text-2xl font-extrabold text-foreground">{displayName}</h1>
-            {pointer.generatedAt ? (
+            {dataTime ? (
               <p className="text-[12px] text-muted">
-                <RelativeTime time={pointer.generatedAt} /> 수집된 {REGION_LABEL[board.region]} 리더보드 기준
+                <RelativeTime time={dataTime} /> 수집된 {REGION_LABEL[board.region]} 리더보드 기준
               </p>
             ) : null}
           </div>

@@ -6,6 +6,9 @@ import { deserializeSnapshot, slicePage, type SnapshotRow } from "@hearthgg/core
 import type { TtlLru } from "./lru";
 import type { BoardPointer, LeaderboardStore } from "./store";
 
+/** No board refreshed for this long means collection has stalled (cron, budget or upstream). */
+export const STALL_AFTER_MS = 60 * 60_000;
+
 export interface ServiceCaches {
   /** Board pointers change every few minutes; cached briefly under a single key. */
   pointers: TtlLru<"all", BoardPointer[]>;
@@ -22,6 +25,8 @@ export interface LeaderboardPage {
   page: number;
   totalPages: number;
   rows: SnapshotRow[];
+  /** Data time of ranks below the refreshed top pages, when older than the top. */
+  deepGeneratedAt: number | null;
 }
 
 export interface PlayerView {
@@ -33,6 +38,14 @@ export interface PlayerView {
   entries: SnapshotRow[];
   /** Exact-name entries on other boards' current seasons. */
   otherBoards: SearchHit[];
+  deepGeneratedAt: number | null;
+}
+
+export interface Freshness {
+  /** Collection is paused by the crawler's upstream circuit breaker until then. */
+  blockedUntil: number | null;
+  /** Newest successful refresh, when it is older than STALL_AFTER_MS. */
+  stalledSince: number | null;
 }
 
 function isPublished(pointer: BoardPointer): pointer is BoardPointer & { snapshotKey: string; generatedAt: number } {
@@ -92,7 +105,13 @@ export class LeaderboardService {
     const index = found && (await this.index(found.pointer));
     if (!found || !index) return null;
     const slice = slicePage(index.snapshot, page);
-    return { pointer: found.pointer, seasonId: found.pointer.seasonId, seasons: found.seasons, ...slice };
+    return {
+      pointer: found.pointer,
+      seasonId: found.pointer.seasonId,
+      seasons: found.seasons,
+      ...slice,
+      deepGeneratedAt: index.snapshot.deepGeneratedAt ?? null,
+    };
   }
 
   async player(board: Board, seasonId: number, name: string): Promise<PlayerView | null> {
@@ -104,7 +123,14 @@ export class LeaderboardService {
     const id = boardId(board);
     const { hits } = await this.search(name, 200);
     const otherBoards = hits.filter((hit) => hit.match === "exact" && boardId(hit) !== id);
-    return { pointer: found.pointer, seasonId, displayName: entries[0]?.[1] ?? name, entries, otherBoards };
+    return {
+      pointer: found.pointer,
+      seasonId,
+      displayName: entries[0]?.[1] ?? name,
+      entries,
+      otherBoards,
+      deepGeneratedAt: index.snapshot.deepGeneratedAt ?? null,
+    };
   }
 
   /** Current boards with their top `limit` rows, for the home page. */
@@ -124,6 +150,13 @@ export class LeaderboardService {
 
   async upstreamBlockedUntil(): Promise<number | null> {
     return this.store.readUpstreamBlock(this.now());
+  }
+
+  async freshness(): Promise<Freshness> {
+    const [blockedUntil, current] = await Promise.all([this.upstreamBlockedUntil(), this.status()]);
+    const newest = Math.max(0, ...current.map((pointer) => pointer.lastSuccessAt ?? 0));
+    const stalledSince = newest > 0 && this.now() - newest > STALL_AFTER_MS ? newest : null;
+    return { blockedUntil, stalledSince };
   }
 
   async status(): Promise<BoardPointer[]> {

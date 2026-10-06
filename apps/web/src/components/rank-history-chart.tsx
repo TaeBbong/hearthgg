@@ -172,6 +172,7 @@ export function RankHistoryChart({ mode, points }: { mode: Mode; points: readonl
         {current ? (
           <div
             role="status"
+            aria-label="선택한 날짜의 순위"
             className="pointer-events-none absolute top-0 z-10 min-w-28 -translate-x-1/2 rounded-md bg-surface px-3 py-2 text-[12px] shadow-lg ring-1 ring-border"
             style={{ left: Math.min(Math.max(current.x, 70), width - 70) }}
           >

@@ -1,4 +1,5 @@
-import type { Board } from "@hearthgg/core/domain";
+import { PAGE_SIZE, type Board } from "@hearthgg/core/domain";
+import { TOP_PAGES } from "@hearthgg/core/refresh";
 import { notFound } from "next/navigation";
 import { getLeaderboard } from "@/lib/data/queries";
 import { formatCount } from "@/lib/format";
@@ -42,6 +43,10 @@ export async function BoardView({
 
   const { pointer } = data;
   const href = (target: number) => boardHref(board, { seasonId, page: target });
+  // Ranks below the top pages are refreshed less often; say so on those pages.
+  const firstRank = data.rows[0]?.[0] ?? 0;
+  const deep = data.deepGeneratedAt !== null && firstRank > TOP_PAGES * PAGE_SIZE;
+  const dataTime = deep ? data.deepGeneratedAt : pointer.generatedAt;
 
   return (
     <Card>
@@ -52,10 +57,11 @@ export async function BoardView({
         <SeasonSelect board={board} seasons={data.seasons} value={data.seasonId} />
         <p className="ml-auto text-[12px] text-muted">
           총 {formatCount(pointer.totalSize ?? 0)}명
-          {pointer.generatedAt ? (
+          {dataTime ? (
             <>
               {" · "}
-              <RelativeTime time={pointer.generatedAt} /> 기준
+              {deep ? `${formatCount(TOP_PAGES * PAGE_SIZE + 1)}위 이하 ` : null}
+              <RelativeTime time={dataTime} /> 기준
             </>
           ) : null}
         </p>

@@ -36,7 +36,7 @@ function pointer(s: Snapshot, isCurrent = true): BoardPointer {
 function setup() {
   const apArena = snapshot("AP", "arena", 56, ["Sinah", "Other", ...Array.from({ length: 30 }, (_, i) => `p${i}`)]);
   const apArenaPast = snapshot("AP", "arena", 55, ["OldChamp", "Sinah"]);
-  const euStandard = snapshot("EU", "standard", 156, ["sinahfan", "SINAH", "x"]);
+  const euStandard = { ...snapshot("EU", "standard", 156, ["sinahfan", "SINAH", "x"]), deepGeneratedAt: NOW - 7_200_000 };
   const snapshots = [apArena, apArenaPast, euStandard];
   const pointers = [pointer(apArena), pointer(apArenaPast, false), pointer(euStandard)];
 
@@ -147,6 +147,22 @@ describe("LeaderboardService", () => {
     expect(await service.upstreamBlockedUntil()).toBe(NOW + 60_000);
     advance(120_000);
     expect(await service.upstreamBlockedUntil()).toBeNull();
+  });
+
+  it("reports a stalled crawler once the newest data is over an hour old", async () => {
+    const { service, advance } = setup();
+    advance(120_000); // past the upstream block in the fake store
+    expect(await service.freshness()).toEqual({ blockedUntil: null, stalledSince: null });
+    advance(61 * 60_000);
+    expect(await service.freshness()).toEqual({ blockedUntil: null, stalledSince: NOW - 30_000 });
+  });
+
+  it("exposes when ranks below the refreshed top pages were collected", async () => {
+    const { service } = setup();
+    const page = await service.leaderboard({ region: "EU", mode: "standard" }, undefined, 1);
+    expect(page?.deepGeneratedAt).toBe(NOW - 7_200_000);
+    expect((await service.player({ region: "EU", mode: "standard" }, 156, "x"))?.deepGeneratedAt).toBe(NOW - 7_200_000);
+    expect((await service.leaderboard({ region: "AP", mode: "arena" }, undefined, 1))?.deepGeneratedAt).toBeNull();
   });
 
   it("lists board status for the current seasons", async () => {

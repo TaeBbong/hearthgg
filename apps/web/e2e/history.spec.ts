@@ -13,13 +13,14 @@ test.describe("rank history", () => {
   test("keyboard users can read each day's value", async ({ page }) => {
     await page.goto("/ap/arena/56/sinah");
     const plot = page.getByRole("group", { name: "날짜별 순위 탐색" }).first();
+    const tooltip = page.getByRole("status", { name: "선택한 날짜의 순위" });
     await plot.focus();
-    await expect(page.getByRole("status")).toContainText("#1");
+    await expect(tooltip).toContainText("#1");
     await plot.press("ArrowLeft");
     await plot.press("ArrowLeft");
     await plot.press("ArrowLeft");
-    await expect(page.getByRole("status")).toContainText("#3");
-    await expect(page.getByRole("status")).toContainText("10월 2일");
+    await expect(tooltip).toContainText("#3");
+    await expect(tooltip).toContainText("10월 2일");
   });
 
   test("players without history see why the chart is empty", async ({ page }) => {

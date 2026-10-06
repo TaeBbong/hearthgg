@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
+import { FreshnessBanner } from "@/components/freshness-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { THEME_SCRIPT } from "@/components/theme-toggle";
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-dvh flex-col">
         <SiteHeader />
+        <FreshnessBanner />
         <main className="mx-auto w-full max-w-[1080px] flex-1 px-4">{children}</main>
         <SiteFooter />
       </body>

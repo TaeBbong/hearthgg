@@ -41,4 +41,6 @@ export const getOverview = cache(async () => (await getService()).overview(3));
 
 export const getUpstreamBlock = cache(async () => (await getService()).upstreamBlockedUntil());
 
+export const getFreshness = cache(async () => (await getService()).freshness());
+
 export const getBoardStatus = cache(async () => (await getService()).status());

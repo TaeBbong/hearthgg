@@ -1,7 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 3100;
-const STATE_DIR = ".wrangler/e2e-state";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -9,6 +8,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
+  // Seeds local state, then starts `next dev` (see global-setup.ts for why not `webServer`).
   globalSetup: "./e2e/global-setup.ts",
   expect: { timeout: 10_000 },
   use: {
@@ -21,11 +21,4 @@ export default defineConfig({
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
-  webServer: {
-    command: `next dev --port ${PORT}`,
-    url: `http://localhost:${PORT}`,
-    env: { HEARTHGG_STATE_DIR: STATE_DIR },
-    reuseExistingServer: false,
-    timeout: 120_000,
-  },
 });
