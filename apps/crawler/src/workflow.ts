@@ -12,6 +12,7 @@ export class CrawlBoardWorkflow extends WorkflowEntrypoint<Env, CrawlParams> {
   override async run(event: WorkflowEvent<CrawlParams>, step: WorkflowStep): Promise<CrawlResult> {
     const crawlStep: CrawlStep = {
       do: (name, fn) => step.do(name, STEP_CONFIG, fn as () => Promise<never>),
+      sleep: (name, ms) => step.sleep(name, ms),
     };
     return runCrawl(event.payload, crawlStep, {
       db: this.env.DB,

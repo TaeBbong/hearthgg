@@ -1,16 +1,20 @@
 import { NonRetryableError } from "cloudflare:workflows";
 import {
+  PAGE_SIZE,
   SnapshotIntegrityError,
   assembleSnapshot,
   boardId,
   chunk,
+  deserializeSnapshot,
   fetchLeaderboardPage,
   isUpstreamBlock,
   mapWithConcurrency,
-  type LeaderboardPage,
+  mergeTopRefresh,
   serializeSnapshot,
   snapshotKey,
+  type LeaderboardPage,
   type Mode,
+  type RefreshKind,
   type Region,
 } from "@hearthgg/core";
 import { BoardStore } from "./board-store";
@@ -24,6 +28,11 @@ export interface CrawlParams {
   mode: Mode;
   seasonId: number;
   runId: string;
+  /** "top" re-reads only the first `pages` pages and merges them into the current snapshot. */
+  kind: RefreshKind;
+  /** Pages to fetch in this run. */
+  pages: number;
+  /** Board size reported by the probe. */
   totalPages: number;
   expectedTotalSize: number;
   fingerprint: string;
@@ -33,6 +42,8 @@ export interface CrawlParams {
 /** The subset of a Workflow step the crawl needs; lets tests run steps inline. */
 export interface CrawlStep {
   do<T>(name: string, fn: () => Promise<T>): Promise<T>;
+  /** Durable sleep: no CPU or requests while waiting. */
+  sleep(name: string, ms: number): Promise<void>;
 }
 
 export interface CrawlDeps {
@@ -55,7 +66,7 @@ export interface CrawlResult {
 }
 
 export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: CrawlDeps): Promise<CrawlResult> {
-  const { region, mode, seasonId, runId, totalPages } = params;
+  const { region, mode, seasonId, runId, kind } = params;
   const { db, bucket, now = Date.now, batchSize = 50, concurrency = 3 } = deps;
   const board = { region, mode };
   const store = new BoardStore(db);
@@ -64,7 +75,7 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
 
   try {
     const pages: Array<{ page: number; data: LeaderboardPage }> = [];
-    const pageNumbers = Array.from({ length: totalPages }, (_, index) => index + 1);
+    const pageNumbers = Array.from({ length: params.pages }, (_, index) => index + 1);
     for (const batch of chunk(pageNumbers, batchSize)) {
       const fetched = await step.do(`fetch pages ${batch[0]}-${batch.at(-1)}`, async () => {
         const blockedUntil = await guard.blockedUntil(now());
@@ -96,9 +107,16 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
           board,
           seasonId,
           generatedAt: params.startedAt,
-          expectedTotalSize: params.expectedTotalSize,
+          // A top refresh covers only its pages, so only those rows are expected.
+          expectedTotalSize: kind === "top" ? Math.min(params.expectedTotalSize, params.pages * PAGE_SIZE) : params.expectedTotalSize,
           pages,
         });
+        if (kind === "top") {
+          const previousKey = (await store.get(board, seasonId))?.snapshotKey;
+          const previous = previousKey ? await bucket.get(previousKey) : null;
+          if (!previous) throw new NonRetryableError("Top refresh needs a previous snapshot to merge into");
+          snapshot = mergeTopRefresh(deserializeSnapshot(await previous.text()), snapshot, params.expectedTotalSize);
+        }
       } catch (error) {
         // Re-running the step would assemble the same pages again.
         if (error instanceof SnapshotIntegrityError) throw new NonRetryableError(error.message, error.name);
@@ -112,7 +130,13 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
         board,
         seasonId,
         runId,
-        { snapshotKey: key, generatedAt: snapshot.generatedAt, totalSize: snapshot.totalSize, fingerprint: params.fingerprint },
+        {
+          snapshotKey: key,
+          generatedAt: snapshot.generatedAt,
+          deepGeneratedAt: snapshot.deepGeneratedAt ?? snapshot.generatedAt,
+          totalSize: snapshot.totalSize,
+          fingerprint: params.fingerprint,
+        },
         now(),
       );
       if (!published) {

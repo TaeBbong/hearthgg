@@ -11,6 +11,11 @@ export interface Snapshot {
   seasonId: number;
   /** Epoch ms when the crawl that produced this snapshot started. */
   generatedAt: number;
+  /**
+   * Data time of rows below the refreshed top pages, when they come from an
+   * earlier full crawl (see mergeTopRefresh). Absent: all rows share generatedAt.
+   */
+  deepGeneratedAt?: number;
   totalSize: number;
   rows: SnapshotRow[];
 }
@@ -77,11 +82,50 @@ export function deserializeSnapshot(json: string): Snapshot {
   return value as Snapshot;
 }
 
+/** First index whose rank is greater than `rank` (rows are rank-ordered). */
+function upperBound(rows: readonly SnapshotRow[], rank: number): number {
+  let low = 0;
+  let high = rows.length;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    if (rows[mid]![0] <= rank) low = mid + 1;
+    else high = mid;
+  }
+  return low;
+}
+
+/**
+ * One leaderboard page, selected by rank range rather than array position:
+ * merged snapshots can have gaps below the top pages, and page links are
+ * computed from ranks.
+ */
 export function slicePage(snapshot: Snapshot, page: number): { page: number; totalPages: number; rows: SnapshotRow[] } {
-  const start = (page - 1) * PAGE_SIZE;
+  const lastRank = snapshot.rows.at(-1)?.[0] ?? 0;
+  const from = (page - 1) * PAGE_SIZE;
   return {
     page,
-    totalPages: Math.ceil(snapshot.rows.length / PAGE_SIZE),
-    rows: start < 0 ? [] : snapshot.rows.slice(start, start + PAGE_SIZE),
+    totalPages: Math.ceil(lastRank / PAGE_SIZE),
+    rows: page < 1 ? [] : snapshot.rows.slice(upperBound(snapshot.rows, from), upperBound(snapshot.rows, from + PAGE_SIZE)),
+  };
+}
+
+/**
+ * Combines a fresh crawl of the top pages with the rest of the previous
+ * snapshot. A player who climbed into the top would otherwise appear twice,
+ * so deep rows whose name is now in the top are dropped; players who fell out
+ * of the top reappear at the next full crawl.
+ */
+export function mergeTopRefresh(previous: Snapshot, top: Snapshot, totalSize: number): Snapshot {
+  if (previous.region !== top.region || previous.mode !== top.mode || previous.seasonId !== top.seasonId) {
+    throw new SnapshotIntegrityError("cannot merge snapshots from different boards or seasons");
+  }
+  const cutoff = top.rows.at(-1)?.[0] ?? 0;
+  const inTop = new Set(top.rows.map(([, accountId]) => accountId));
+  const deep = previous.rows.filter(([rank, accountId]) => rank > cutoff && !inTop.has(accountId));
+  return {
+    ...top,
+    totalSize,
+    deepGeneratedAt: previous.deepGeneratedAt ?? previous.generatedAt,
+    rows: [...top.rows, ...deep],
   };
 }

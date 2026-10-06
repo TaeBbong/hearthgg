@@ -67,6 +67,7 @@ describe("publish", () => {
   const snapshot = (generatedAt: number) => ({
     snapshotKey: `snapshots/AP/arena/56/${generatedAt}.json`,
     generatedAt,
+    deepGeneratedAt: generatedAt - 1,
     totalSize: 10,
     fingerprint: `fp-${generatedAt}`,
   });
@@ -85,6 +86,7 @@ describe("publish", () => {
       snapshotKey: snapshot(3).snapshotKey,
       previousSnapshotKey: snapshot(2).snapshotKey,
       generatedAt: 3,
+      deepGeneratedAt: 2,
       fingerprint: "fp-3",
       lastSuccessAt: NOW,
       lockRunId: null,
@@ -112,6 +114,17 @@ describe("publish", () => {
     await store().acquireLock(board, 56, "run-a", NOW, LEASE);
     await store().publish(board, 56, "run-a", snapshot(1), NOW);
     expect(await store().getCurrent(board)).toMatchObject({ consecutiveFailures: 0, lastError: null });
+  });
+});
+
+describe("extendLock", () => {
+  it("renews the lease for the owner only", async () => {
+    await store().ensureCurrentSeason(board, 56);
+    await store().acquireLock(board, 56, "run-a", NOW, LEASE);
+    expect(await store().extendLock(board, 56, "run-a", NOW + LEASE - 1, LEASE)).toBe(true);
+    // Renewed, so another run still cannot take it right after the original lease.
+    expect(await store().acquireLock(board, 56, "run-b", NOW + LEASE + 1, LEASE)).toBe(false);
+    expect(await store().extendLock(board, 56, "run-b", NOW, LEASE)).toBe(false);
   });
 });
 

@@ -8,6 +8,7 @@ export interface BoardRow {
   snapshotKey: string | null;
   previousSnapshotKey: string | null;
   generatedAt: number | null;
+  deepGeneratedAt: number | null;
   totalSize: number | null;
   fingerprint: string | null;
   lastSuccessAt: number | null;
@@ -26,6 +27,7 @@ interface RawBoardRow {
   snapshot_key: string | null;
   previous_snapshot_key: string | null;
   generated_at: number | null;
+  deep_generated_at: number | null;
   total_size: number | null;
   fingerprint: string | null;
   last_success_at: number | null;
@@ -45,6 +47,7 @@ function toBoardRow(raw: RawBoardRow): BoardRow {
     snapshotKey: raw.snapshot_key,
     previousSnapshotKey: raw.previous_snapshot_key,
     generatedAt: raw.generated_at,
+    deepGeneratedAt: raw.deep_generated_at,
     totalSize: raw.total_size,
     fingerprint: raw.fingerprint,
     lastSuccessAt: raw.last_success_at,
@@ -59,6 +62,8 @@ function toBoardRow(raw: RawBoardRow): BoardRow {
 export interface PublishInput {
   snapshotKey: string;
   generatedAt: number;
+  /** Data time of ranks below the top pages (equals generatedAt after a full crawl). */
+  deepGeneratedAt: number;
   totalSize: number;
   fingerprint: string;
 }
@@ -138,6 +143,19 @@ export class BoardStore {
     return row?.active ?? 0;
   }
 
+  /** Heartbeat for long crawls (e.g. waiting on the request budget). False if the lock was lost. */
+  async extendLock({ region, mode }: Board, seasonId: number, runId: string, now: number, leaseMs: number): Promise<boolean> {
+    const row = await this.db
+      .prepare(
+        `UPDATE boards SET lock_expires_at = ?
+         WHERE region = ? AND mode = ? AND season_id = ? AND lock_run_id = ?
+         RETURNING lock_run_id`,
+      )
+      .bind(now + leaseMs, region, mode, seasonId, runId)
+      .first();
+    return row !== null;
+  }
+
   async releaseLock({ region, mode }: Board, seasonId: number, runId: string): Promise<void> {
     await this.db
       .prepare(
@@ -167,12 +185,23 @@ export class BoardStore {
            previous_snapshot_key = snapshot_key,
            snapshot_key = ?1, generated_at = ?2, total_size = ?3, fingerprint = ?4,
            last_success_at = ?5, last_error = NULL, consecutive_failures = 0,
-           lock_run_id = NULL, lock_expires_at = NULL
+           lock_run_id = NULL, lock_expires_at = NULL, deep_generated_at = ?10
          WHERE region = ?6 AND mode = ?7 AND season_id = ?8 AND lock_run_id = ?9
            AND (generated_at IS NULL OR generated_at < ?2)
          RETURNING snapshot_key`,
       )
-      .bind(input.snapshotKey, input.generatedAt, input.totalSize, input.fingerprint, now, board.region, board.mode, seasonId, runId)
+      .bind(
+        input.snapshotKey,
+        input.generatedAt,
+        input.totalSize,
+        input.fingerprint,
+        now,
+        board.region,
+        board.mode,
+        seasonId,
+        runId,
+        input.deepGeneratedAt,
+      )
       .first();
     if (!row) return { published: false, staleKey: null };
     return { published: true, staleKey: before?.previousSnapshotKey ?? null };

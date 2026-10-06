@@ -3,6 +3,7 @@ export * from "./blizzard";
 export * from "./domain";
 export * from "./history";
 export * from "./normalize";
+export * from "./refresh";
 export * from "./schedule";
 export * from "./search";
 export * from "./snapshot";

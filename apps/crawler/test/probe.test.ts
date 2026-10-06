@@ -61,7 +61,7 @@ describe("runProbeCycle", () => {
     const { started, deps, store } = setup();
     await runProbeCycle(deps);
     const arena = started.find((p) => p.region === "AP" && p.mode === "arena")!;
-    await store.publish(ap, 56, arena.runId, { snapshotKey: "k", generatedAt: NOW, totalSize: 60, fingerprint: arena.fingerprint }, NOW);
+    await store.publish(ap, 56, arena.runId, { snapshotKey: "k", generatedAt: NOW, deepGeneratedAt: NOW, totalSize: 60, fingerprint: arena.fingerprint }, NOW);
     started.length = 0;
 
     const outcomes = await runProbeCycle({ ...deps, now: () => NOW + 10 * 60_000 });
@@ -74,7 +74,7 @@ describe("runProbeCycle", () => {
     const { started, deps, store } = setup(blizzard);
     await runProbeCycle(deps);
     const first = started.find((p) => p.region === "AP" && p.mode === "arena")!;
-    await store.publish(ap, 56, first.runId, { snapshotKey: "k", generatedAt: NOW, totalSize: 60, fingerprint: first.fingerprint }, NOW);
+    await store.publish(ap, 56, first.runId, { snapshotKey: "k", generatedAt: NOW, deepGeneratedAt: NOW, totalSize: 60, fingerprint: first.fingerprint }, NOW);
     started.length = 0;
 
     blizzard.boards["AP:arena"] = { seasonId: 57, names: names(5), past: { 56: names(70) } };
@@ -98,6 +98,19 @@ describe("runProbeCycle", () => {
     expect((await store.getCurrent(ap))?.consecutiveFailures).toBe(1);
   });
 
+  it("re-reads only the top pages of a big board whose deep part is still fresh", async () => {
+    const { started, deps, store } = setup(createFakeBlizzard({ "AP:arena": { seasonId: 56, names: names(2_000) } }));
+    await runProbeCycle(deps);
+    const first = started.find((p) => p.region === "AP" && p.mode === "arena")!;
+    expect(first).toMatchObject({ kind: "full", pages: 80 });
+    const dataTime = NOW - 15 * 60_000;
+    await store.publish(ap, 56, first.runId, { snapshotKey: "k", generatedAt: dataTime, deepGeneratedAt: dataTime, totalSize: 2_000, fingerprint: "old" }, NOW);
+    started.length = 0;
+
+    await runProbeCycle(deps);
+    expect(started.find((p) => p.region === "AP" && p.mode === "arena")).toMatchObject({ kind: "top", pages: 40, totalPages: 80 });
+  });
+
   it("caps crawls in flight across boards and defers the rest to a later tick", async () => {
     const { started, deps } = setup();
     const outcomes = await runProbeCycle({ ...deps, maxConcurrentCrawls: 4 });
@@ -117,13 +130,13 @@ describe("runProbeCycle", () => {
         "EU:arena": { seasonId: 56, names: names(60) },
       }),
     );
-    // Publish everything except EU:arena; AP:arena is the oldest publication.
+    // Publish everything except EU:arena; AP:arena holds the oldest data.
     await runProbeCycle(deps);
     for (const params of started) {
       if (params.region === "EU" && params.mode === "arena") continue;
       const age = params.region === "AP" && params.mode === "arena" ? 3 : 1;
       const board = { region: params.region, mode: params.mode };
-      await store.publish(board, params.seasonId, params.runId, { snapshotKey: "k", generatedAt: NOW, totalSize: 0, fingerprint: "old" }, NOW - age * 60 * 60_000);
+      await store.publish(board, params.seasonId, params.runId, { snapshotKey: "k", generatedAt: NOW - age * 3_600_000, deepGeneratedAt: NOW - age * 3_600_000, totalSize: 0, fingerprint: "old" }, NOW);
     }
     await store.releaseLock({ region: "EU", mode: "arena" }, 56, started.find((p) => p.region === "EU" && p.mode === "arena")!.runId);
     started.length = 0;

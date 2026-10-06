@@ -12,13 +12,17 @@ const board = { region: "AP", mode: "wild" } as const;
 /** Runs steps inline and records their names, like a Workflow without persistence. */
 function inlineStep() {
   const names: string[] = [];
+  const sleeps: Array<[string, number]> = [];
   const step: CrawlStep = {
     async do(name, fn) {
       names.push(name);
       return fn();
     },
+    async sleep(name, ms) {
+      sleeps.push([name, ms]);
+    },
   };
-  return { step, names };
+  return { step, names, sleeps };
 }
 
 function params(overrides: Partial<CrawlParams> = {}): CrawlParams {
@@ -27,6 +31,8 @@ function params(overrides: Partial<CrawlParams> = {}): CrawlParams {
     mode: "wild",
     seasonId: 156,
     runId: "run-1",
+    kind: "full",
+    pages: 5,
     totalPages: 5,
     expectedTotalSize: 120,
     fingerprint: "fp-1",
@@ -131,6 +137,34 @@ describe("runCrawl", () => {
     ).rejects.toThrow(/blocked/);
     expect(blizzard.requests).toHaveLength(0);
     expect((await store.getCurrent(board))?.lockRunId).toBeNull();
+  });
+
+  it("refreshes only the top pages and keeps deeper rows from the previous snapshot", async () => {
+    const store = await prepare();
+    const deps = { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW };
+    await runCrawl(params({ startedAt: 1_000 }), inlineStep().step, deps);
+
+    // Top two pages reshuffle; the rest of the board is not re-read.
+    blizzard.boards["AP:wild"] = { seasonId: 156, names: [...names(50, "fresh"), ...names(120).slice(50)] };
+    blizzard.requests.length = 0;
+    await store.acquireLock(board, 156, "run-2", NOW + 120_000, 60_000);
+    const result = await runCrawl(params({ runId: "run-2", kind: "top", pages: 2, startedAt: 2_000 }), inlineStep().step, deps);
+
+    expect(result.published).toBe(true);
+    expect(blizzard.requests.map((url) => url.searchParams.get("page"))).toEqual(["1", "2"]);
+    const current = await store.getCurrent(board);
+    expect(current).toMatchObject({ generatedAt: 2_000, deepGeneratedAt: 1_000, totalSize: 120 });
+    const snapshot = deserializeSnapshot(await (await env.SNAPSHOTS.get(current!.snapshotKey!))!.text());
+    expect(snapshot.rows[0]?.[1]).toBe("fresh1");
+    expect(snapshot.rows[50]).toEqual([51, "player51", 100]);
+    expect(snapshot.deepGeneratedAt).toBe(1_000);
+  });
+
+  it("refuses a top refresh when there is no previous snapshot to merge into", async () => {
+    await prepare();
+    await expect(
+      runCrawl(params({ kind: "top", pages: 2 }), inlineStep().step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW }),
+    ).rejects.toThrow(/previous snapshot/);
   });
 
   it("rejects an inconsistent crawl without publishing", async () => {

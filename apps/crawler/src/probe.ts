@@ -1,7 +1,7 @@
 import {
   BOARDS,
   boardId,
-  decideCrawl,
+  decideRefresh,
   fetchLeaderboardPage,
   isUpstreamBlock,
   mapWithConcurrency,
@@ -9,6 +9,7 @@ import {
   type Board,
   type BoardId,
   type LeaderboardPage,
+  type RefreshKind,
 } from "@hearthgg/core";
 import { BoardStore } from "./board-store";
 import { ALERT_AFTER_FAILURES, type CrawlParams } from "./crawl";
@@ -49,8 +50,10 @@ interface Candidate {
   page: LeaderboardPage;
   fingerprint: string;
   reason: string;
-  /** Lower runs first: unpublished boards, then the stalest. */
-  priority: number;
+  kind: RefreshKind;
+  pages: number;
+  /** Higher runs first: unpublished boards, then whatever is most overdue for its tier. */
+  urgency: number;
   /** Retired-season crawls ride along without an outcome of their own. */
   final: boolean;
 }
@@ -97,7 +100,17 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
         // Best effort: the retired season keeps its last regular snapshot if this fails.
         try {
           const last = await fetchLeaderboardPage({ ...board, page: 1, seasonId: previousSeasonId }, fetchDeps);
-          candidates.push({ board, seasonId: previousSeasonId, page: last, fingerprint: await pageFingerprint(last), reason: "final", priority: -1, final: true });
+          candidates.push({
+            board,
+            seasonId: previousSeasonId,
+            page: last,
+            fingerprint: await pageFingerprint(last),
+            reason: "final",
+            kind: "full",
+            pages: last.totalPages,
+            urgency: Infinity,
+            final: true,
+          });
         } catch (error) {
           console.error(`final crawl of ${boardId(board)} season ${previousSeasonId} not scheduled`, error);
         }
@@ -105,12 +118,14 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
 
       const row = await store.get(board, seasonId);
       const fingerprint = await pageFingerprint(page);
-      const decision = decideCrawl(
-        row?.snapshotKey ? { seasonId, fingerprint: row.fingerprint, lastSuccessAt: row.lastSuccessAt } : null,
+      const decision = decideRefresh(
+        row?.snapshotKey
+          ? { seasonId, fingerprint: row.fingerprint, topRefreshedAt: row.generatedAt, fullRefreshedAt: row.deepGeneratedAt }
+          : null,
         { seasonId, fingerprint, totalPages: page.totalPages },
         now,
       );
-      if (!decision.crawl) {
+      if (!decision.refresh) {
         outcomes.set(boardId(board), { board: boardId(board), action: "skipped", seasonId, reason: decision.reason });
         return;
       }
@@ -118,7 +133,17 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
         outcomes.set(boardId(board), { board: boardId(board), action: "locked", seasonId, reason: decision.reason });
         return;
       }
-      candidates.push({ board, seasonId, page, fingerprint, reason: decision.reason, priority: row?.lastSuccessAt ?? 0, final: false });
+      candidates.push({
+        board,
+        seasonId,
+        page,
+        fingerprint,
+        reason: decision.reason,
+        kind: decision.kind,
+        pages: decision.pages,
+        urgency: decision.urgency,
+        final: false,
+      });
     } catch (error) {
       if (isUpstreamBlock(error)) {
         blocked = true;
@@ -137,8 +162,9 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
   if (blocked) return skippedAll();
 
   let budget = (deps.maxConcurrentCrawls ?? MAX_CONCURRENT_CRAWLS) - (await store.countActiveLocks(now));
-  for (const candidate of candidates.toSorted((a, b) => a.priority - b.priority)) {
-    const { board, seasonId, page, fingerprint, reason, final } = candidate;
+  // Stable sort: equally urgent candidates keep probe order (retired seasons first).
+  for (const candidate of candidates.toSorted((a, b) => (b.urgency === a.urgency ? 0 : b.urgency - a.urgency))) {
+    const { board, seasonId, page, fingerprint, reason, kind, pages, final } = candidate;
     const id = boardId(board);
     const record = (outcome: Omit<ProbeOutcome, "board" | "seasonId">) => {
       if (!final) outcomes.set(id, { board: id, seasonId, reason, ...outcome });
@@ -154,7 +180,17 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
       continue;
     }
     try {
-      await deps.startCrawl({ ...board, seasonId, runId, totalPages: page.totalPages, expectedTotalSize: page.totalSize, fingerprint, startedAt: now });
+      await deps.startCrawl({
+        ...board,
+        seasonId,
+        runId,
+        kind,
+        pages,
+        totalPages: page.totalPages,
+        expectedTotalSize: page.totalSize,
+        fingerprint,
+        startedAt: now,
+      });
       budget--;
       record({ action: "started" });
     } catch (error) {

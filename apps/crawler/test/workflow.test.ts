@@ -29,6 +29,8 @@ describe("CrawlBoardWorkflow", () => {
       ...board,
       seasonId: pages[0]!.seasonId,
       runId,
+      kind: "full",
+      pages: pages.length,
       totalPages: pages.length,
       expectedTotalSize: pages[0]!.totalSize,
       fingerprint: "fp",

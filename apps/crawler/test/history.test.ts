@@ -25,7 +25,7 @@ async function publish(s: Snapshot) {
   await store.acquireLock(board, s.seasonId, "run", NOW - 120_000, 60_000);
   const key = snapshotKey(s);
   await env.SNAPSHOTS.put(key, serializeSnapshot(s));
-  await store.publish(board, s.seasonId, "run", { snapshotKey: key, generatedAt: s.generatedAt, totalSize: s.totalSize, fingerprint: "f" }, NOW);
+  await store.publish(board, s.seasonId, "run", { snapshotKey: key, generatedAt: s.generatedAt, deepGeneratedAt: s.generatedAt, totalSize: s.totalSize, fingerprint: "f" }, NOW);
 }
 
 async function history(name: string) {

@@ -3,12 +3,14 @@ import { parseLeaderboardPage, type LeaderboardPage } from "../src/blizzard";
 import {
   SnapshotIntegrityError,
   assembleSnapshot,
+  mergeTopRefresh,
   deserializeSnapshot,
   serializeSnapshot,
   slicePage,
   snapshotKey,
 } from "../src/snapshot";
 import wildBoard from "./fixtures/ap-wild-board.json";
+import type { Snapshot } from "../src/snapshot";
 
 const board = { region: "AP", mode: "wild" } as const;
 const pages: LeaderboardPage[] = wildBoard.map((page) => parseLeaderboardPage(page));
@@ -105,5 +107,65 @@ describe("slicePage", () => {
 
   it("clamps out-of-range pages to an empty result", () => {
     expect(slicePage(assembleSnapshot(input()), 999).rows).toEqual([]);
+  });
+});
+
+function namedBoard(names: string[], generatedAt: number, overrides: Partial<Snapshot> = {}): Snapshot {
+  return {
+    v: 1,
+    region: "AP",
+    mode: "arena",
+    seasonId: 56,
+    generatedAt,
+    totalSize: names.length,
+    rows: names.map((name, index) => [index + 1, name, null]),
+    ...overrides,
+  };
+}
+
+describe("mergeTopRefresh", () => {
+  const previous = namedBoard(["a", "b", "c", "d", "e", "f"], 100);
+
+  it("takes fresh top rows and keeps the older rows below them", () => {
+    const top = namedBoard(["b", "a", "x"], 200);
+    const merged = mergeTopRefresh(previous, top, 7);
+    expect(merged.rows.map(([rank, name]) => [rank, name])).toEqual([
+      [1, "b"],
+      [2, "a"],
+      [3, "x"],
+      [4, "d"],
+      [5, "e"],
+      [6, "f"],
+    ]);
+    expect(merged).toMatchObject({ generatedAt: 200, deepGeneratedAt: 100, totalSize: 7 });
+  });
+
+  it("drops a deep row whose player now appears in the fresh top", () => {
+    const top = namedBoard(["a", "b", "e"], 200);
+    expect(mergeTopRefresh(previous, top, 6).rows.map(([rank, name]) => [rank, name])).toEqual([
+      [1, "a"],
+      [2, "b"],
+      [3, "e"],
+      [4, "d"],
+      [6, "f"],
+    ]);
+  });
+
+  it("keeps the deep part's original timestamp across repeated top refreshes", () => {
+    const once = mergeTopRefresh(previous, namedBoard(["a", "b", "c"], 200), 6);
+    expect(mergeTopRefresh(once, namedBoard(["a", "b", "c"], 300), 6).deepGeneratedAt).toBe(100);
+  });
+
+  it("refuses to merge different boards or seasons", () => {
+    expect(() => mergeTopRefresh(previous, namedBoard(["a"], 200, { seasonId: 57 }), 1)).toThrow(SnapshotIntegrityError);
+  });
+});
+
+describe("slicePage with rank gaps", () => {
+  it("selects rows by rank range so pages match rank links", () => {
+    const gappy: Snapshot = { ...namedBoard([], 0), rows: [[1, "a", null], [26, "z", null], [27, "y", null], [52, "q", null]] };
+    expect(slicePage(gappy, 2).rows.map(([rank]) => rank)).toEqual([26, 27]);
+    expect(slicePage(gappy, 3).rows.map(([rank]) => rank)).toEqual([52]);
+    expect(slicePage(gappy, 3).totalPages).toBe(3);
   });
 });
