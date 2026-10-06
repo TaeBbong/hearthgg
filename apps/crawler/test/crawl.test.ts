@@ -4,13 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BoardStore } from "../src/board-store";
 import { runCrawl, type CrawlParams, type CrawlStep } from "../src/crawl";
 import { UpstreamGuard } from "../src/upstream-guard";
+import { RequestBudget } from "../src/request-budget";
+import { MAX_BUDGET_WAITS, REQUEST_BURST } from "../src/limits";
 import { createFakeBlizzard, names } from "./fake-blizzard";
 
 const NOW = Date.UTC(2026, 9, 5, 12);
 const board = { region: "AP", mode: "wild" } as const;
 
 /** Runs steps inline and records their names, like a Workflow without persistence. */
-function inlineStep() {
+function inlineStep(onSleep: (ms: number) => void = () => {}) {
   const names: string[] = [];
   const sleeps: Array<[string, number]> = [];
   const step: CrawlStep = {
@@ -20,6 +22,7 @@ function inlineStep() {
     },
     async sleep(name, ms) {
       sleeps.push([name, ms]);
+      onSleep(ms);
     },
   };
   return { step, names, sleeps };
@@ -60,7 +63,15 @@ describe("runCrawl", () => {
 
     const result = await runCrawl(params(), step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW, batchSize: 2 });
 
-    expect(steps).toEqual(["fetch pages 1-2", "fetch pages 3-4", "fetch pages 5-5", "publish"]);
+    expect(steps).toEqual([
+      "reserve pages 1-2 (1)",
+      "fetch pages 1-2",
+      "reserve pages 3-4 (1)",
+      "fetch pages 3-4",
+      "reserve pages 5-5 (1)",
+      "fetch pages 5-5",
+      "publish",
+    ]);
     expect(result).toMatchObject({ published: true, totalSize: 120 });
 
     const current = await store.getCurrent(board);
@@ -92,10 +103,30 @@ describe("runCrawl", () => {
     expect(await env.SNAPSHOTS.head(keys[2]!)).not.toBeNull();
   });
 
-  it("discards its own object when it lost the lock before publishing", async () => {
+  it("stops before any request when it does not hold the lock", async () => {
     const store = await prepare("someone-else");
-    const result = await runCrawl(params(), inlineStep().step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW });
+    await expect(
+      runCrawl(params(), inlineStep().step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW }),
+    ).rejects.toThrow(/lock/);
+    expect(blizzard.requests).toHaveLength(0);
+    expect((await store.getCurrent(board))?.lockRunId).toBe("someone-else");
+  });
 
+  it("discards its own object when it lost the lock right before publishing", async () => {
+    const store = await prepare();
+    const { step } = inlineStep();
+    const takeoverBeforePublish: CrawlStep = {
+      ...step,
+      async do(name, fn) {
+        if (name === "publish") {
+          await store.releaseLock(board, 156, "run-1");
+          await store.acquireLock(board, 156, "someone-else", NOW, 60_000);
+        }
+        return step.do(name, fn);
+      },
+    };
+
+    const result = await runCrawl(params(), takeoverBeforePublish, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW });
     expect(result.published).toBe(false);
     expect((await env.SNAPSHOTS.list()).objects).toHaveLength(0);
     expect((await store.getCurrent(board))?.snapshotKey).toBeNull();
@@ -165,6 +196,50 @@ describe("runCrawl", () => {
     await expect(
       runCrawl(params({ kind: "top", pages: 2 }), inlineStep().step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW }),
     ).rejects.toThrow(/previous snapshot/);
+  });
+
+  it("sleeps until the request budget refills instead of overspending", async () => {
+    const store = await prepare();
+    await new RequestBudget(env.DB).reserve(REQUEST_BURST, NOW);
+    let clock = NOW;
+    const { step, sleeps } = inlineStep((ms) => (clock += ms));
+
+    const result = await runCrawl(params(), step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => clock });
+
+    expect(result.published).toBe(true);
+    expect(sleeps[0]?.[0]).toBe("wait for budget 1-5 (1)");
+    expect(sleeps[0]?.[1]).toBeGreaterThan(0);
+    expect((await store.getCurrent(board))?.lockRunId).toBeNull();
+  });
+
+  it("gives up when the budget never frees up", async () => {
+    const store = await prepare();
+    await new RequestBudget(env.DB).reserve(REQUEST_BURST, NOW);
+    const { step, sleeps } = inlineStep(); // time never advances
+
+    await expect(
+      runCrawl(params(), step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW }),
+    ).rejects.toThrow(/budget/);
+    expect(sleeps).toHaveLength(MAX_BUDGET_WAITS);
+    expect(blizzard.requests).toHaveLength(0);
+    expect((await store.getCurrent(board))?.consecutiveFailures).toBe(1);
+  });
+
+  it("stops when another run took over its lock while it waited", async () => {
+    const store = await prepare();
+    await new RequestBudget(env.DB).reserve(REQUEST_BURST, NOW);
+    let clock = NOW;
+    const { step } = inlineStep((ms) => {
+      clock += ms;
+    });
+    // Simulate a takeover after the first wait.
+    await store.releaseLock(board, 156, "run-1");
+    await store.acquireLock(board, 156, "intruder", NOW, 60 * 60_000);
+
+    await expect(
+      runCrawl(params(), step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => clock }),
+    ).rejects.toThrow(/lock/);
+    expect(blizzard.requests).toHaveLength(0);
   });
 
   it("rejects an inconsistent crawl without publishing", async () => {

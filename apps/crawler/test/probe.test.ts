@@ -5,6 +5,8 @@ import { BoardStore } from "../src/board-store";
 import type { CrawlParams } from "../src/crawl";
 import { runProbeCycle } from "../src/probe";
 import { UpstreamGuard } from "../src/upstream-guard";
+import { RequestBudget } from "../src/request-budget";
+import { REQUEST_BURST } from "../src/limits";
 import { createFakeBlizzard, names } from "./fake-blizzard";
 
 const NOW = Date.UTC(2026, 9, 5, 12);
@@ -168,6 +170,27 @@ describe("runProbeCycle", () => {
     expect(await new UpstreamGuard(env.DB).blockedUntil(NOW)).not.toBeNull();
     expect(alerts).toHaveLength(1);
     expect(alerts[0]).toMatch(/403/);
+  });
+
+  it("skips the whole cycle when the request budget cannot cover the probe", async () => {
+    const { blizzard, deps } = setup();
+    await new RequestBudget(env.DB).reserve(REQUEST_BURST, NOW);
+
+    const outcomes = await runProbeCycle(deps);
+    expect(blizzard.requests).toHaveLength(0);
+    expect(outcomes.every((o) => o.action === "skipped" && o.reason === "budget")).toBe(true);
+  });
+
+  it("defers crawls the budget cannot start yet", async () => {
+    const { started, deps } = setup();
+    // Leave exactly enough for the probe itself.
+    await new RequestBudget(env.DB).reserve(REQUEST_BURST - BOARDS.length, NOW);
+
+    const outcomes = await runProbeCycle(deps);
+    expect(outcomes.find((o) => o.board === "AP:arena")).toMatchObject({ action: "deferred", reason: "budget" });
+    expect(started.some((p) => p.region === "AP" && p.mode === "arena")).toBe(false);
+    // Empty boards cost no pages, so they still start.
+    expect(started.every((p) => p.pages === 0)).toBe(true);
   });
 
   it("releases the lock when the workflow cannot be started", async () => {

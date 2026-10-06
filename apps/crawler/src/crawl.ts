@@ -18,6 +18,8 @@ import {
   type Region,
 } from "@hearthgg/core";
 import { BoardStore } from "./board-store";
+import { BUDGET_WAIT_CAP_MS, CRAWL_BATCH_PAGES, CRAWL_CONCURRENCY, LOCK_LEASE_MS, MAX_BUDGET_WAITS } from "./limits";
+import { RequestBudget } from "./request-budget";
 import { BLOCK_COOLDOWN_MS, UpstreamGuard } from "./upstream-guard";
 
 /** Consecutive failures that trigger one alert (not repeated until the board recovers). */
@@ -67,19 +69,34 @@ export interface CrawlResult {
 
 export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: CrawlDeps): Promise<CrawlResult> {
   const { region, mode, seasonId, runId, kind } = params;
-  const { db, bucket, now = Date.now, batchSize = 50, concurrency = 3 } = deps;
+  const { db, bucket, now = Date.now, batchSize = CRAWL_BATCH_PAGES, concurrency = CRAWL_CONCURRENCY } = deps;
   const board = { region, mode };
   const store = new BoardStore(db);
   const guard = new UpstreamGuard(db);
+  const budget = new RequestBudget(db);
   const fetchDeps = { fetch: deps.fetch, sleep: deps.sleep };
 
   try {
     const pages: Array<{ page: number; data: LeaderboardPage }> = [];
     const pageNumbers = Array.from({ length: params.pages }, (_, index) => index + 1);
     for (const batch of chunk(pageNumbers, batchSize)) {
-      const fetched = await step.do(`fetch pages ${batch[0]}-${batch.at(-1)}`, async () => {
-        const blockedUntil = await guard.blockedUntil(now());
-        if (blockedUntil) throw new NonRetryableError(`Upstream blocked until ${new Date(blockedUntil).toISOString()}`);
+      const range = `${batch[0]}-${batch.at(-1)}`;
+      for (let attempt = 1; ; attempt++) {
+        const reservation = await step.do(`reserve pages ${range} (${attempt})`, async () => {
+          // Doubles as the lock heartbeat: budget waits can outlast one lease.
+          if (!(await store.extendLock(board, seasonId, runId, now(), LOCK_LEASE_MS))) {
+            throw new NonRetryableError("Crawl lock was taken over by another run");
+          }
+          const blockedUntil = await guard.blockedUntil(now());
+          if (blockedUntil) throw new NonRetryableError(`Upstream blocked until ${new Date(blockedUntil).toISOString()}`);
+          return budget.reserve(batch.length, now());
+        });
+        if (reservation.granted) break;
+        if (attempt > MAX_BUDGET_WAITS) throw new NonRetryableError("Request budget did not free up in time");
+        await step.sleep(`wait for budget ${range} (${attempt})`, Math.min(reservation.waitMs, BUDGET_WAIT_CAP_MS));
+      }
+
+      const fetched = await step.do(`fetch pages ${range}`, async () => {
         try {
           return await mapWithConcurrency(batch, concurrency, async (page) => ({
             page,

@@ -13,17 +13,9 @@ import {
 } from "@hearthgg/core";
 import { BoardStore } from "./board-store";
 import { ALERT_AFTER_FAILURES, type CrawlParams } from "./crawl";
+import { CRAWL_BATCH_PAGES, LOCK_LEASE_MS, MAX_CONCURRENT_CRAWLS, PROBE_CONCURRENCY } from "./limits";
+import { RequestBudget } from "./request-budget";
 import { BLOCK_COOLDOWN_MS, UpstreamGuard } from "./upstream-guard";
-
-/** Upper bound for one crawl; a crashed run's lock frees itself after this. */
-export const LOCK_LEASE_MS = 30 * 60_000;
-
-/**
- * Crawls allowed in flight across all boards. Each crawl keeps a few upstream
- * requests open (3 by default), so this bounds total load on Blizzard: bursts
- * of ~90 parallel requests got answered with 403s.
- */
-export const MAX_CONCURRENT_CRAWLS = 2;
 
 export interface ProbeDeps {
   db: D1Database;
@@ -69,10 +61,13 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
   const outcomes = new Map<BoardId, ProbeOutcome>();
   const candidates: Candidate[] = [];
   const guard = new UpstreamGuard(deps.db);
-  const skippedAll = (): ProbeOutcome[] =>
-    BOARDS.map((board) => outcomes.get(boardId(board)) ?? { board: boardId(board), action: "skipped", reason: "upstream-blocked" });
+  const budget = new RequestBudget(deps.db);
+  const skippedAll = (reason: string): ProbeOutcome[] =>
+    BOARDS.map((board) => outcomes.get(boardId(board)) ?? { board: boardId(board), action: "skipped", reason });
 
-  if (await guard.blockedUntil(now)) return skippedAll();
+  if (await guard.blockedUntil(now)) return skippedAll("upstream-blocked");
+  // The probe itself costs one request per board.
+  if (!(await budget.reserve(BOARDS.length, now)).granted) return skippedAll("budget");
   let blocked = false;
 
   async function fail(board: Board, seasonId: number | undefined, error: unknown) {
@@ -158,10 +153,10 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
   }
 
   // Keep upstream concurrency low; the probe runs every few minutes.
-  await mapWithConcurrency(BOARDS, deps.concurrency ?? 2, probe);
-  if (blocked) return skippedAll();
+  await mapWithConcurrency(BOARDS, deps.concurrency ?? PROBE_CONCURRENCY, probe);
+  if (blocked) return skippedAll("upstream-blocked");
 
-  let budget = (deps.maxConcurrentCrawls ?? MAX_CONCURRENT_CRAWLS) - (await store.countActiveLocks(now));
+  let slots = (deps.maxConcurrentCrawls ?? MAX_CONCURRENT_CRAWLS) - (await store.countActiveLocks(now));
   // Stable sort: equally urgent candidates keep probe order (retired seasons first).
   for (const candidate of candidates.toSorted((a, b) => (b.urgency === a.urgency ? 0 : b.urgency - a.urgency))) {
     const { board, seasonId, page, fingerprint, reason, kind, pages, final } = candidate;
@@ -170,8 +165,13 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
       if (!final) outcomes.set(id, { board: id, seasonId, reason, ...outcome });
     };
 
-    if (budget <= 0) {
-      record({ action: "deferred" });
+    if (slots <= 0) {
+      record({ action: "deferred", reason: "no-slot" });
+      continue;
+    }
+    // Only start what can make progress now; the workflow reserves per batch as it goes.
+    if ((await budget.available(now)) < Math.min(CRAWL_BATCH_PAGES, pages)) {
+      record({ action: "deferred", reason: "budget" });
       continue;
     }
     const runId = `${board.region}-${board.mode}-${seasonId}-${now}`;
@@ -191,7 +191,7 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
         fingerprint,
         startedAt: now,
       });
-      budget--;
+      slots--;
       record({ action: "started" });
     } catch (error) {
       await store.releaseLock(board, seasonId, runId);
