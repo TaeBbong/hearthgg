@@ -1,6 +1,6 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "hearthgg-web",
+  "name": "rank",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -11,7 +11,7 @@
   },
   "services": [
     // Self-reference used by OpenNext for cache revalidation (https://opennext.js.org/cloudflare/caching)
-    { "binding": "WORKER_SELF_REFERENCE", "service": "hearthgg-web" }
+    { "binding": "WORKER_SELF_REFERENCE", "service": "rank" }
   ],
   "r2_buckets": [
     { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "hearthgg-web-opennext-cache" },

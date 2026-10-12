@@ -6,7 +6,7 @@ interface __BaseEnv_CloudflareEnv {
 	SNAPSHOTS: R2Bucket;
 	DB: D1Database;
 	ASSETS: Fetcher;
-	WORKER_SELF_REFERENCE: Fetcher /* hearthgg-web */;
+	WORKER_SELF_REFERENCE: Fetcher /* rank */;
 }
 declare namespace Cloudflare {
 	interface Env extends __BaseEnv_CloudflareEnv {}
