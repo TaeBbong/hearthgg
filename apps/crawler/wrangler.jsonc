@@ -3,6 +3,9 @@
   "name": "hearthgg-crawler",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-01",
+  // Cron + Workflow only; no public HTTP endpoint.
+  "workers_dev": false,
+  "preview_urls": false,
   "observability": { "enabled": true },
   "triggers": {
     // Probe every board every 5 minutes; ticks between 23:50 and 24:00 KST also record daily history.
@@ -13,7 +16,7 @@
     {
       "binding": "DB",
       "database_name": "hearthgg",
-      "database_id": "00000000-0000-4000-8000-000000000000",
+      "database_id": "ed7d3399-a694-4193-ab1a-096e9afabd02",
       "migrations_dir": "../../migrations"
     }
   ],

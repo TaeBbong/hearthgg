@@ -20,6 +20,6 @@
   ],
   "d1_databases": [
     // Same database as the crawler (migrations live in /migrations and are applied from apps/crawler).
-    { "binding": "DB", "database_name": "hearthgg", "database_id": "00000000-0000-4000-8000-000000000000" }
+    { "binding": "DB", "database_name": "hearthgg", "database_id": "ed7d3399-a694-4193-ab1a-096e9afabd02" }
   ]
 }
