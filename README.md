@@ -1,7 +1,7 @@
 # hearthgg
 
 하스스톤 리더보드(투기장 · 지하 투기장 · 정규전 · 야생전 · 전장)를 아메리카 · 유럽 · 아시아 전 지역에서 한 번에 검색하는 웹 서비스입니다.
-Flutter Web + Flask로 만들었던 [이전 버전](https://github.com/TaeBbong/hearthgg)을 Next.js + Cloudflare 서버리스 구조로 다시 만들었습니다.
+Flutter Web + Flask로 만들었던 [이전 버전](https://github.com/TaeBbong/hearthgg/tree/v1-flutter)을 Next.js + Cloudflare 서버리스 구조로 다시 만들었습니다.
 
 ## 아키텍처
 
