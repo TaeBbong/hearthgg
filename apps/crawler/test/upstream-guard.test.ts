@@ -58,3 +58,25 @@ describe("UpstreamGuard", () => {
     expect(await guard().status(NOW + HOUR)).toEqual({ blockedUntil: null, strikes: 1 });
   });
 });
+
+describe("claimRecoveryNotice", () => {
+  const guard = () => new UpstreamGuard(env.DB);
+
+  it("is claimable exactly once after a block ends", async () => {
+    await guard().trip(NOW, "403");
+    expect(await guard().claimRecoveryNotice(NOW + 10 * MINUTE)).toBe(false); // still blocked
+    expect(await guard().claimRecoveryNotice(NOW + 31 * MINUTE)).toBe(true);
+    expect(await guard().claimRecoveryNotice(NOW + 36 * MINUTE)).toBe(false);
+  });
+
+  it("re-arms on the next block", async () => {
+    await guard().trip(NOW, "403");
+    await guard().claimRecoveryNotice(NOW + 31 * MINUTE);
+    await guard().trip(NOW + 40 * MINUTE, "403");
+    expect(await guard().claimRecoveryNotice(NOW + 40 * MINUTE + 2 * HOUR)).toBe(true);
+  });
+
+  it("has nothing to announce when there was never a block", async () => {
+    expect(await guard().claimRecoveryNotice(NOW)).toBe(false);
+  });
+});

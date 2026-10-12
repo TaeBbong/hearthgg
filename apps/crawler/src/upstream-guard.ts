@@ -22,12 +22,6 @@ export function throttleFactor(strikes: number): number {
   return 1 / 2 ** Math.min(strikes, MAX_THROTTLE_STRIKES);
 }
 
-export function blockAlert(trip: TripResult, cause: string): string {
-  return `[hearthgg] Blizzard is blocking requests (${cause}); pausing all crawls for ${Math.round(
-    cooldownFor(trip.strikes) / MINUTE,
-  )} minutes (strike ${trip.strikes})`;
-}
-
 export interface UpstreamStatus {
   blockedUntil: number | null;
   strikes: number;
@@ -82,13 +76,25 @@ export class UpstreamGuard {
     const blockedUntil = now + cooldownFor(strikes);
     await this.db
       .prepare(
-        `INSERT INTO upstream_state (id, blocked_until, reason, tripped_at, strikes) VALUES (1, ?1, ?2, ?3, ?4)
+        `INSERT INTO upstream_state (id, blocked_until, reason, tripped_at, strikes, recovery_pending) VALUES (1, ?1, ?2, ?3, ?4, 1)
          ON CONFLICT (id) DO UPDATE SET
            blocked_until = excluded.blocked_until, reason = excluded.reason,
-           tripped_at = excluded.tripped_at, strikes = excluded.strikes`,
+           tripped_at = excluded.tripped_at, strikes = excluded.strikes, recovery_pending = 1`,
       )
       .bind(blockedUntil, reason.slice(0, 200), now, strikes)
       .run();
     return { newlyBlocked: true, blockedUntil, strikes };
+  }
+
+  /**
+   * True exactly once per block, once it has ended: the caller announces that
+   * crawling resumed. Call it after requests succeeded again.
+   */
+  async claimRecoveryNotice(now: number): Promise<boolean> {
+    const row = await this.db
+      .prepare("UPDATE upstream_state SET recovery_pending = 0 WHERE id = 1 AND recovery_pending = 1 AND blocked_until <= ? RETURNING id")
+      .bind(now)
+      .first();
+    return row !== null;
   }
 }

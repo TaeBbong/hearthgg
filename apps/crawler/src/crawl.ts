@@ -20,7 +20,8 @@ import {
 import { BoardStore } from "./board-store";
 import { BUDGET_WAIT_CAP_MS, CRAWL_BATCH_PAGES, CRAWL_CONCURRENCY, LOCK_LEASE_MS, MAX_BUDGET_WAITS } from "./limits";
 import { RequestBudget } from "./request-budget";
-import { UpstreamGuard, blockAlert, throttleFactor } from "./upstream-guard";
+import { blockAlert, boardFailureAlert, boardRecoveryNotice } from "./messages";
+import { UpstreamGuard, throttleFactor } from "./upstream-guard";
 
 /** Consecutive failures that trigger one alert (not repeated until the board recovers). */
 export const ALERT_AFTER_FAILURES = 3;
@@ -65,6 +66,8 @@ export interface CrawlResult {
   published: boolean;
   key: string | null;
   totalSize: number;
+  /** Failure streak this publish ended (0 if none). */
+  recoveredFrom: number;
 }
 
 export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: CrawlDeps): Promise<CrawlResult> {
@@ -117,7 +120,7 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
       pages.push(...fetched);
     }
 
-    return await step.do("publish", async () => {
+    const result = await step.do("publish", async (): Promise<CrawlResult> => {
       let snapshot;
       try {
         snapshot = assembleSnapshot({
@@ -143,7 +146,7 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
       const key = snapshotKey(snapshot);
       await bucket.put(key, serializeSnapshot(snapshot), { httpMetadata: { contentType: "application/json" } });
 
-      const { published, staleKey } = await store.publish(
+      const { published, staleKey, recoveredFrom } = await store.publish(
         board,
         seasonId,
         runId,
@@ -158,20 +161,32 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
       );
       if (!published) {
         // A retried step may find its own earlier attempt already published.
-        if ((await store.get(board, seasonId))?.snapshotKey === key) return { published: true, key, totalSize: snapshot.totalSize };
+        if ((await store.get(board, seasonId))?.snapshotKey === key) return { published: true, key, totalSize: snapshot.totalSize, recoveredFrom: 0 };
         await bucket.delete(key);
-        return { published: false, key: null, totalSize: snapshot.totalSize };
+        return { published: false, key: null, totalSize: snapshot.totalSize, recoveredFrom: 0 };
       }
       if (staleKey) await bucket.delete(staleKey);
-      return { published: true, key, totalSize: snapshot.totalSize };
+      return { published: true, key, totalSize: snapshot.totalSize, recoveredFrom };
     });
+
+    // Notifications run inside steps: code between steps re-runs when a workflow replays.
+    if (result.recoveredFrom >= ALERT_AFTER_FAILURES) {
+      await step.do("notify recovery", async () => {
+        await deps.alert?.(boardRecoveryNotice(boardId(board), result.recoveredFrom));
+        return true;
+      });
+    }
+    return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const failures = await step.do("record failure", () => store.recordFailure(board, seasonId, runId, message, now()));
     // During an upstream block the breaker already alerted once for everyone.
     const blocked = (await guard.blockedUntil(now())) !== null;
     if (failures === ALERT_AFTER_FAILURES && !blocked) {
-      await deps.alert?.(`[hearthgg] ${boardId(board)} season ${seasonId} failed ${failures} times in a row: ${message}`);
+      await step.do("notify failure", async () => {
+        await deps.alert?.(boardFailureAlert(boardId(board), seasonId, failures, message));
+        return true;
+      });
     }
     throw error;
   }

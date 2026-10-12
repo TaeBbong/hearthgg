@@ -15,7 +15,8 @@ import { BoardStore } from "./board-store";
 import { ALERT_AFTER_FAILURES, type CrawlParams } from "./crawl";
 import { CRAWL_BATCH_PAGES, LOCK_LEASE_MS, MAX_CONCURRENT_CRAWLS, PROBE_CONCURRENCY } from "./limits";
 import { RequestBudget } from "./request-budget";
-import { UpstreamGuard, blockAlert, throttleFactor } from "./upstream-guard";
+import { blockAlert, blockRecoveryNotice, boardFailureAlert } from "./messages";
+import { UpstreamGuard, throttleFactor } from "./upstream-guard";
 
 export interface ProbeDeps {
   db: D1Database;
@@ -80,7 +81,7 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
     if (failedSeason !== undefined) {
       const failures = await store.recordFailure(board, failedSeason, null, message, now);
       if (failures === ALERT_AFTER_FAILURES) {
-        await deps.alert?.(`[hearthgg] ${id} failed ${failures} times in a row: ${message}`);
+        await deps.alert?.(boardFailureAlert(id, undefined, failures, message));
       }
     }
     outcomes.set(id, { board: id, action: "failed", seasonId, error: message });
@@ -155,6 +156,8 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
   // Keep upstream concurrency low; the probe runs every few minutes.
   await mapWithConcurrency(BOARDS, deps.concurrency ?? PROBE_CONCURRENCY, probe);
   if (blocked) return skippedAll("upstream-blocked");
+  // Requests just succeeded again: if a block ended since the last tick, say so once.
+  if (await guard.claimRecoveryNotice(now)) await deps.alert?.(blockRecoveryNotice(strikes));
 
   const maxCrawls = Math.max(1, Math.floor((deps.maxConcurrentCrawls ?? MAX_CONCURRENT_CRAWLS) * throttle));
   let slots = maxCrawls - (await store.countActiveLocks(now));

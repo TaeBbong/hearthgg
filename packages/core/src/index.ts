@@ -2,6 +2,7 @@ export * from "./async";
 export * from "./blizzard";
 export * from "./domain";
 export * from "./history";
+export * from "./labels";
 export * from "./normalize";
 export * from "./refresh";
 export * from "./schedule";

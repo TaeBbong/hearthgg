@@ -169,7 +169,8 @@ export class BoardStore {
   /**
    * Atomically points the board at a new snapshot. Only the lock owner may
    * publish, and only a newer snapshot may replace the current one. Returns the
-   * object key that fell out of the two-version window and can be deleted.
+   * object key that fell out of the two-version window and can be deleted, and
+   * the failure streak this success ended.
    */
   async publish(
     board: Board,
@@ -177,7 +178,7 @@ export class BoardStore {
     runId: string,
     input: PublishInput,
     now: number,
-  ): Promise<{ published: boolean; staleKey: string | null }> {
+  ): Promise<{ published: boolean; staleKey: string | null; recoveredFrom: number }> {
     const before = await this.get(board, seasonId);
     const row = await this.db
       .prepare(
@@ -203,8 +204,8 @@ export class BoardStore {
         input.deepGeneratedAt,
       )
       .first();
-    if (!row) return { published: false, staleKey: null };
-    return { published: true, staleKey: before?.previousSnapshotKey ?? null };
+    if (!row) return { published: false, staleKey: null, recoveredFrom: 0 };
+    return { published: true, staleKey: before?.previousSnapshotKey ?? null, recoveredFrom: before?.consecutiveFailures ?? 0 };
   }
 
   /** Records a failed probe or crawl; returns the new consecutive failure count (0 if the board is unknown). */

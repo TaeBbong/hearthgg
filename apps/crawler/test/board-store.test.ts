@@ -108,11 +108,12 @@ describe("publish", () => {
     expect((await store().publish(board, 56, "run-b", snapshot(9), NOW)).published).toBe(false);
   });
 
-  it("resets failure counters on success", async () => {
+  it("resets failure counters on success and reports the streak it ended", async () => {
     await store().ensureCurrentSeason(board, 56);
     await store().recordFailure(board, 56, null, "boom", NOW);
+    await store().recordFailure(board, 56, null, "boom", NOW);
     await store().acquireLock(board, 56, "run-a", NOW, LEASE);
-    await store().publish(board, 56, "run-a", snapshot(1), NOW);
+    expect((await store().publish(board, 56, "run-a", snapshot(1), NOW)).recoveredFrom).toBe(2);
     expect(await store().getCurrent(board)).toMatchObject({ consecutiveFailures: 0, lastError: null });
   });
 });

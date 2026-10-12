@@ -164,6 +164,26 @@ describe("runProbeCycle", () => {
     expect(started).toHaveLength(2);
   });
 
+  it("announces once that crawling resumed after a block ended", async () => {
+    const { deps } = setup();
+    await new UpstreamGuard(env.DB).trip(NOW - 40 * 60_000, "403"); // block over, 1 strike
+    const alerts: string[] = [];
+    const alert = async (message: string) => void alerts.push(message);
+
+    await runProbeCycle({ ...deps, alert });
+    await runProbeCycle({ ...deps, alert, now: () => NOW + 5 * 60_000 });
+    expect(alerts).toEqual(["[hearthgg] ✅ Blizzard 차단이 풀려 수집을 재개했습니다. 당분간 처리량을 50%로 낮춰 운영합니다."]);
+  });
+
+  it("does not announce recovery if the first probe after a block is blocked again", async () => {
+    const { blizzard, deps } = setup();
+    await new UpstreamGuard(env.DB).trip(NOW - 40 * 60_000, "403");
+    blizzard.failAll(403);
+    const alerts: string[] = [];
+    await runProbeCycle({ ...deps, concurrency: 1, alert: async (message) => void alerts.push(message) });
+    expect(alerts.some((m) => m.includes("재개"))).toBe(false);
+  });
+
   it("does not alert again for a block that is already in effect", async () => {
     const { blizzard, deps } = setup();
     blizzard.failAll(403);

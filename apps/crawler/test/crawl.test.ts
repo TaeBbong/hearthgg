@@ -132,6 +132,29 @@ describe("runCrawl", () => {
     expect((await store.getCurrent(board))?.snapshotKey).toBeNull();
   });
 
+  it("announces recovery when a board that triggered an alert publishes again", async () => {
+    const store = await prepare();
+    for (let i = 0; i < 3; i++) await store.recordFailure(board, 156, null, "boom", NOW);
+    await store.acquireLock(board, 156, "run-1", NOW, 60_000);
+    const alerts: string[] = [];
+
+    const { step, names: steps } = inlineStep();
+    await runCrawl(params(), step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW, alert: async (m) => void alerts.push(m) });
+
+    expect(alerts).toEqual(["[hearthgg] ✅ AP:wild 수집이 3회 연속 실패 후 복구됐습니다."]);
+    // Sent from a step so a workflow replay cannot send it twice.
+    expect(steps.at(-1)).toBe("notify recovery");
+  });
+
+  it("stays quiet when a shorter failure streak ends", async () => {
+    const store = await prepare();
+    await store.recordFailure(board, 156, null, "boom", NOW);
+    await store.acquireLock(board, 156, "run-1", NOW, 60_000);
+    const alerts: string[] = [];
+    await runCrawl(params(), inlineStep().step, { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW, alert: async (m) => void alerts.push(m) });
+    expect(alerts).toEqual([]);
+  });
+
   it("records the failure, alerts on the third in a row and rethrows", async () => {
     const store = await prepare();
     blizzard.failAll(500);
@@ -145,7 +168,7 @@ describe("runCrawl", () => {
 
     expect(await store.getCurrent(board)).toMatchObject({ consecutiveFailures: 3, lockRunId: null });
     expect(alert).toHaveBeenCalledOnce();
-    expect(alert.mock.calls[0]?.[0]).toMatch(/AP:wild/);
+    expect(alert.mock.calls[0]?.[0]).toMatch(/AP:wild 시즌 156 수집이 3회 연속 실패/);
   });
 
   it("trips the global breaker on a 403 and alerts about the block, not the board", async () => {
