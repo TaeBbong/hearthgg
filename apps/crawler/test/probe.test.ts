@@ -113,6 +113,28 @@ describe("runProbeCycle", () => {
     expect(started.find((p) => p.region === "AP" && p.mode === "arena")).toMatchObject({ kind: "top", pages: 40, totalPages: 80 });
   });
 
+  it("starts AP boards first when crawl slots are short", async () => {
+    const { started, deps } = setup();
+    await runProbeCycle({ ...deps, maxConcurrentCrawls: 2 });
+    expect(started.map((p) => p.region)).toEqual(["AP", "AP"]);
+  });
+
+  it("keeps AP fresher: refreshes its top pages after 5 minutes, other regions after 10", async () => {
+    const boards = { "AP:arena": { seasonId: 56, names: names(60) }, "US:arena": { seasonId: 56, names: names(60) } };
+    const { started, deps, store } = setup(createFakeBlizzard(boards));
+    await runProbeCycle(deps);
+    const dataTime = NOW - 6 * 60_000;
+    for (const params of started.filter((p) => p.mode === "arena")) {
+      const board = { region: params.region, mode: params.mode };
+      await store.publish(board, 56, params.runId, { snapshotKey: "k", generatedAt: dataTime, deepGeneratedAt: dataTime, totalSize: 60, fingerprint: "old" }, NOW);
+    }
+    started.length = 0;
+
+    const outcomes = await runProbeCycle({ ...deps, now: () => NOW + 1 });
+    expect(outcomes.find((o) => o.board === "AP:arena")).toMatchObject({ action: "started" });
+    expect(outcomes.find((o) => o.board === "US:arena")).toMatchObject({ action: "skipped", reason: "too-soon" });
+  });
+
   it("caps crawls in flight across boards and defers the rest to a later tick", async () => {
     const { started, deps } = setup();
     const outcomes = await runProbeCycle({ ...deps, maxConcurrentCrawls: 4 });

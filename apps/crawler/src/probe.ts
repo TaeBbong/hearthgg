@@ -1,11 +1,13 @@
 import {
   BOARDS,
   boardId,
+  compareRefreshPriority,
   decideRefresh,
   fetchLeaderboardPage,
   isUpstreamBlock,
   mapWithConcurrency,
   pageFingerprint,
+  refreshPolicyFor,
   type Board,
   type BoardId,
   type LeaderboardPage,
@@ -45,7 +47,7 @@ interface Candidate {
   reason: string;
   kind: RefreshKind;
   pages: number;
-  /** Higher runs first: unpublished boards, then whatever is most overdue for its tier. */
+  /** Higher runs first: unpublished boards, then whatever is most overdue for its tier (AP weighted up). */
   urgency: number;
   /** Retired-season crawls ride along without an outcome of their own. */
   final: boolean;
@@ -123,6 +125,8 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
           : null,
         { seasonId, fingerprint, totalPages: page.totalPages },
         now,
+        // AP (the Korean community) refreshes on a faster clock.
+        refreshPolicyFor(board.region),
       );
       if (!decision.refresh) {
         outcomes.set(boardId(board), { board: boardId(board), action: "skipped", seasonId, reason: decision.reason });
@@ -161,8 +165,9 @@ export async function runProbeCycle(deps: ProbeDeps): Promise<ProbeOutcome[]> {
 
   const maxCrawls = Math.max(1, Math.floor((deps.maxConcurrentCrawls ?? MAX_CONCURRENT_CRAWLS) * throttle));
   let slots = maxCrawls - (await store.countActiveLocks(now));
-  // Stable sort: equally urgent candidates keep probe order (retired seasons first).
-  for (const candidate of candidates.toSorted((a, b) => (b.urgency === a.urgency ? 0 : b.urgency - a.urgency))) {
+  // AP first, then by how overdue; the sort is stable, so a retired season stays ahead of its new one.
+  const ordered = candidates.toSorted((a, b) => compareRefreshPriority({ region: a.board.region, urgency: a.urgency }, { region: b.board.region, urgency: b.urgency }));
+  for (const candidate of ordered) {
     const { board, seasonId, page, fingerprint, reason, kind, pages, final } = candidate;
     const id = boardId(board);
     const record = (outcome: Omit<ProbeOutcome, "board" | "seasonId">) => {

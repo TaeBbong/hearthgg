@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { FULL_INTERVAL_MS, TOP_INTERVAL_MS, TOP_MAX_STALENESS_MS, TOP_PAGES, decideRefresh } from "../src/refresh";
+import {
+  FULL_INTERVAL_MS,
+  TOP_INTERVAL_MS,
+  TOP_MAX_STALENESS_MS,
+  TOP_PAGES,
+  compareRefreshPriority,
+  decideRefresh,
+  refreshPolicyFor,
+} from "../src/refresh";
 
 const MINUTE = 60_000;
 const NOW = Date.UTC(2026, 9, 6, 12);
@@ -45,5 +53,40 @@ describe("decideRefresh", () => {
   it("treats boards that fit in the top pages as full crawls on the top schedule", () => {
     const small = { ...fresh, seasonId: 156, fullRefreshedAt: NOW - 3 * FULL_INTERVAL_MS };
     expect(decideRefresh(small, smallProbe, NOW)).toMatchObject({ refresh: true, kind: "full", reason: "changed", pages: 31 });
+  });
+});
+
+describe("regional priority", () => {
+  it("refreshes AP on a faster clock than other regions", () => {
+    expect(refreshPolicyFor("AP")).toEqual({ topIntervalMs: 5 * MINUTE, topMaxStalenessMs: 30 * MINUTE, fullIntervalMs: 60 * MINUTE });
+    expect(refreshPolicyFor("US")).toEqual({ topIntervalMs: TOP_INTERVAL_MS, topMaxStalenessMs: TOP_MAX_STALENESS_MS, fullIntervalMs: FULL_INTERVAL_MS });
+    expect(refreshPolicyFor("EU")).toEqual(refreshPolicyFor("US"));
+  });
+
+  it("applies the region's policy to refresh decisions", () => {
+    const state = { ...fresh, topRefreshedAt: NOW - 6 * MINUTE, fullRefreshedAt: NOW - 30 * MINUTE };
+    expect(decideRefresh(state, bigProbe, NOW, refreshPolicyFor("US"))).toEqual({ refresh: false, reason: "too-soon" });
+    expect(decideRefresh(state, bigProbe, NOW, refreshPolicyFor("AP"))).toMatchObject({ refresh: true, kind: "top", urgency: 6 / 5 });
+
+    const deep = { ...fresh, fullRefreshedAt: NOW - 70 * MINUTE };
+    expect(decideRefresh(deep, bigProbe, NOW, refreshPolicyFor("US"))).toMatchObject({ kind: "top" });
+    expect(decideRefresh(deep, bigProbe, NOW, refreshPolicyFor("AP"))).toMatchObject({ kind: "full", reason: "deep-due" });
+  });
+
+  it("orders AP first: weighted urgency, then region rank on ties", () => {
+    const candidates = [
+      { region: "US", urgency: 1.5 },
+      { region: "AP", urgency: 1 },
+      { region: "EU", urgency: Infinity },
+      { region: "AP", urgency: Infinity },
+      { region: "US", urgency: 3 },
+    ] as const;
+    expect(candidates.toSorted(compareRefreshPriority).map((c) => `${c.region}:${c.urgency}`)).toEqual([
+      "AP:Infinity",
+      "EU:Infinity",
+      "US:3",
+      "AP:1",
+      "US:1.5",
+    ]);
   });
 });
