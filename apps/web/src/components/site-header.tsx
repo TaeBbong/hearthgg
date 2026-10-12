@@ -13,7 +13,11 @@ export function SiteHeader() {
         <Link href="/" className="shrink-0" aria-label="hearthgg 홈">
           <Logo />
         </Link>
-        <nav aria-label="모드" className="-mx-1 flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto [scrollbar-width:none]">
+        {/* Scrolls sideways on narrow screens; the fade shows there is more. */}
+        <nav
+          aria-label="모드"
+          className="-mx-1 flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto [mask-image:linear-gradient(to_right,#000_75%,transparent)] [scrollbar-width:none] sm:[mask-image:none]"
+        >
           {MODES.map((mode) => (
             <Link
               key={mode}
