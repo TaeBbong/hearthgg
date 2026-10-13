@@ -1,4 +1,5 @@
-export const REGIONS = ["US", "EU", "AP"] as const;
+/** Display and crawl order: Asia-Pacific first, since the service starts with the Korean community. */
+export const REGIONS = ["AP", "US", "EU"] as const;
 export type Region = (typeof REGIONS)[number];
 
 export const MODES = ["arena", "undergroundarena", "standard", "wild", "battlegrounds"] as const;
@@ -15,6 +16,11 @@ export interface Board {
 export const BOARDS: readonly Board[] = REGIONS.flatMap((region) =>
   MODES.map((mode) => ({ region, mode })),
 );
+
+/** Sort comparator: region order (AP, US, EU), then mode order. */
+export function compareBoards(a: Board, b: Board): number {
+  return REGIONS.indexOf(a.region) - REGIONS.indexOf(b.region) || MODES.indexOf(a.mode) - MODES.indexOf(b.mode);
+}
 
 export function isRegion(value: string): value is Region {
   return (REGIONS as readonly string[]).includes(value);

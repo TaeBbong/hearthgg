@@ -5,6 +5,7 @@ import {
   PAGE_SIZE,
   REGIONS,
   boardId,
+  compareBoards,
   isMode,
   isRegion,
   pageOfRank,
@@ -16,8 +17,20 @@ import {
 describe("domain", () => {
   it("supports the agreed modes and every region", () => {
     expect(MODES).toEqual(["arena", "undergroundarena", "standard", "wild", "battlegrounds"]);
-    expect(REGIONS).toEqual(["US", "EU", "AP"]);
+    expect(REGIONS).toEqual(["AP", "US", "EU"]); // display order: AP first for the Korean community
     expect(BOARDS).toHaveLength(MODES.length * REGIONS.length);
+  });
+
+  it("orders boards by region (AP, US, EU), then by mode", () => {
+    const boards = [
+      { region: "EU", mode: "arena" },
+      { region: "US", mode: "wild" },
+      { region: "AP", mode: "battlegrounds" },
+      { region: "US", mode: "arena" },
+      { region: "AP", mode: "arena" },
+    ] as const;
+    expect(boards.toSorted(compareBoards).map(boardId)).toEqual(["AP:arena", "AP:battlegrounds", "US:arena", "US:wild", "EU:arena"]);
+    expect(BOARDS.map(boardId).slice(0, 2)).toEqual(["AP:arena", "AP:undergroundarena"]);
   });
 
   it("guards modes and regions", () => {

@@ -1,4 +1,4 @@
-import { boardId, type Board } from "@hearthgg/core/domain";
+import { boardId, compareBoards, type Board } from "@hearthgg/core/domain";
 import type { HistoryPoint } from "@hearthgg/core/history";
 import { normalizeName } from "@hearthgg/core/normalize";
 import { buildSearchIndex, findExact, search, type SearchHit, type SearchIndex, type SearchResult } from "@hearthgg/core/search";
@@ -62,7 +62,8 @@ export class LeaderboardService {
   async boards(): Promise<BoardPointer[]> {
     const cached = this.caches.pointers.get("all", this.now());
     if (cached) return cached;
-    const pointers = await this.store.listBoards();
+    // Display order (AP, US, EU), not the store's alphabetical one; newest season first within a board.
+    const pointers = (await this.store.listBoards()).toSorted((a, b) => compareBoards(a, b) || b.seasonId - a.seasonId);
     this.caches.pointers.set("all", pointers, this.now());
     return pointers;
   }

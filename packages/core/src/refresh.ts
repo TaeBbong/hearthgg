@@ -1,4 +1,4 @@
-import type { Region } from "./domain";
+import { REGIONS, type Region } from "./domain";
 
 const MINUTE = 60_000;
 
@@ -33,19 +33,17 @@ export const PRIORITY_POLICY: RefreshPolicy = {
 export const PRIORITY_REGION: Region = "AP";
 /** How much more an equally overdue priority-region board counts when budget is short. */
 const PRIORITY_WEIGHT = 2;
-/** Tie-break order when urgency is equal (e.g. several boards never crawled). */
-const REGION_RANK: Record<Region, number> = { AP: 0, US: 1, EU: 2 };
 
 export function refreshPolicyFor(region: Region): RefreshPolicy {
   return region === PRIORITY_REGION ? PRIORITY_POLICY : DEFAULT_POLICY;
 }
 
-/** Sort comparator for refresh candidates: weighted urgency (desc), then region rank. */
+/** Sort comparator for refresh candidates: weighted urgency (desc), then region order (AP, US, EU). */
 export function compareRefreshPriority(a: { region: Region; urgency: number }, b: { region: Region; urgency: number }): number {
   const weight = (c: { region: Region; urgency: number }) => (c.region === PRIORITY_REGION ? c.urgency * PRIORITY_WEIGHT : c.urgency);
   const [wa, wb] = [weight(a), weight(b)];
   if (wa !== wb) return wb > wa ? 1 : -1;
-  return REGION_RANK[a.region] - REGION_RANK[b.region];
+  return REGIONS.indexOf(a.region) - REGIONS.indexOf(b.region);
 }
 
 export interface RefreshState {

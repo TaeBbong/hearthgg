@@ -1,4 +1,4 @@
-import { MODE_LABEL, type BoardId } from "@hearthgg/core";
+import { MODE_LABEL, compareBoards, type BoardId } from "@hearthgg/core";
 import type { BoardRow } from "./board-store";
 import { cooldownFor, throttleFactor, type TripResult, type UpstreamStatus } from "./upstream-guard";
 
@@ -59,7 +59,7 @@ export interface DailyReportInput {
 
 export function dailyReport({ day, now, boards, captured, upstream }: DailyReportInput): string {
   const tally = { ok: 0, lagging: 0, failing: 0, pending: 0 };
-  const lines = boards.map((board) => {
+  const lines = boards.toSorted(compareBoards).map((board) => {
     const label = `${board.region} ${MODE_LABEL[board.mode]} 시즌 ${board.seasonId}`;
     if (!board.snapshotKey || board.generatedAt === null) {
       tally.pending++;

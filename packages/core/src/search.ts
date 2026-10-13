@@ -1,4 +1,4 @@
-import type { Mode, Region } from "./domain";
+import { compareBoards, type Mode, type Region } from "./domain";
 import { normalizeName } from "./normalize";
 import type { Snapshot, SnapshotRow } from "./snapshot";
 
@@ -38,7 +38,7 @@ function matchKind(name: string, query: string): MatchKind | undefined {
   return undefined;
 }
 
-/** Case-insensitive partial match across boards; exact matches first, then prefix, then contains. */
+/** Case-insensitive partial match across boards; exact matches first, then prefix, then contains; then rank, then board order. */
 export function search(indexes: readonly SearchIndex[], rawQuery: string, { limit = 50 } = {}): SearchResult {
   const query = normalizeName(rawQuery);
   if (!query) return { hits: [], total: 0 };
@@ -53,7 +53,7 @@ export function search(indexes: readonly SearchIndex[], rawQuery: string, { limi
     });
   }
 
-  hits.sort((a, b) => MATCH_ORDER[a.match] - MATCH_ORDER[b.match] || a.rank - b.rank);
+  hits.sort((a, b) => MATCH_ORDER[a.match] - MATCH_ORDER[b.match] || a.rank - b.rank || compareBoards(a, b));
   return { hits: hits.slice(0, limit), total: hits.length };
 }
 

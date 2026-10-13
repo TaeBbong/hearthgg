@@ -42,6 +42,12 @@ describe("search", () => {
     expect(hits.map((hit) => [hit.region, hit.mode, hit.accountId])).toContainEqual(["EU", "arena", "SINAH"]);
   });
 
+  it("breaks rank ties by board order: AP, US, EU", () => {
+    const board = (region: Snapshot["region"]) => buildSearchIndex(snapshot({ region, mode: "arena", seasonId: 56 }, [["Champ", 7]]));
+    const { hits } = search([board("EU"), board("US"), board("AP")], "champ");
+    expect(hits.map((hit) => hit.region)).toEqual(["AP", "US", "EU"]);
+  });
+
   it("orders exact > prefix > contains, then by rank", () => {
     const { hits } = search([apStandard, euArena], "sinah");
     expect(hits.map((hit) => [hit.match, hit.accountId, hit.rank])).toEqual([

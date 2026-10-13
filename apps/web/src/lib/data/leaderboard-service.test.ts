@@ -78,6 +78,25 @@ describe("LeaderboardService", () => {
     ]);
   });
 
+  it("lists boards in display order (AP, US, EU), newest season first", async () => {
+    const { service, store } = setup();
+    const usWild = snapshot("US", "wild", 156, ["x"]);
+    const apArena = snapshot("AP", "arena", 56, ["y"]);
+    // D1 sorts region codes alphabetically (AP, EU, US); the service must not leak that order.
+    vi.mocked(store.listBoards).mockResolvedValueOnce([
+      pointer(snapshot("EU", "arena", 56, ["z"])),
+      pointer(usWild),
+      pointer(snapshot("AP", "arena", 55, ["w"]), false),
+      pointer(apArena),
+    ]);
+    expect((await service.boards()).map((p) => `${p.region}:${p.mode}:${p.seasonId}`)).toEqual([
+      "AP:arena:56",
+      "AP:arena:55",
+      "US:wild:156",
+      "EU:arena:56",
+    ]);
+  });
+
   it("parses each immutable snapshot once across calls", async () => {
     const { service, store } = setup();
     await service.search("a");
