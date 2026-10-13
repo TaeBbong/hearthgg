@@ -10,7 +10,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 bg-header text-header-foreground shadow-sm">
       <div className="mx-auto flex h-12 max-w-[1080px] items-center gap-4 px-4">
-        <Link href="/" className="shrink-0" aria-label="hearthgg 홈">
+        <Link href="/" className="flex shrink-0 items-center" aria-label="hearthgg 홈">
           <Logo />
         </Link>
         {/* Scrolls sideways on narrow screens; the fade shows there is more. */}
