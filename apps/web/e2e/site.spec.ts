@@ -8,4 +8,17 @@ test.describe("site chrome", () => {
     const centre = (box: { y: number; height: number } | null) => (box ? box.y + box.height / 2 : NaN);
     expect(Math.abs(centre(logo) - centre(menu))).toBeLessThanOrEqual(1);
   });
+
+  test("links the legal pages from the footer", async ({ page }) => {
+    await page.goto("/");
+    const footer = page.getByRole("contentinfo");
+
+    await footer.getByRole("link", { name: "이용약관" }).click();
+    await expect(page).toHaveURL(/\/terms$/);
+    await expect(page.getByRole("heading", { level: 1, name: "이용약관" })).toBeVisible();
+
+    await footer.getByRole("link", { name: "개인정보처리방침" }).click();
+    await expect(page).toHaveURL(/\/privacy$/);
+    await expect(page.getByRole("heading", { level: 1, name: "개인정보처리방침" })).toBeVisible();
+  });
 });
