@@ -115,5 +115,5 @@ npx wrangler d1 create hearthgg            # 출력된 database_id를 두 wrangl
 npm exec -w crawler -- wrangler d1 migrations apply hearthgg --remote
 npm exec -w crawler -- wrangler secret put ALERT_WEBHOOK_URL   # 선택: Discord 웹훅
 npm run deploy -w crawler
-NEXT_PUBLIC_SITE_URL=https://<배포 주소> npm run deploy -w web
+npm run deploy -w web                      # 사이트 주소는 apps/web/.env.production의 NEXT_PUBLIC_SITE_URL
 ```

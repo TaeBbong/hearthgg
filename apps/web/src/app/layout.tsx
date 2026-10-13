@@ -5,9 +5,10 @@ import { FreshnessBanner } from "@/components/freshness-banner";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { THEME_SCRIPT } from "@/components/theme-toggle";
+import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(SITE_URL),
   title: { default: "hearthgg - 하스스톤 랭킹 검색", template: "%s | hearthgg" },
   description: "투기장, 지하 투기장, 정규전, 야생전, 전장 리더보드를 전 지역에서 한 번에 검색하세요.",
   openGraph: { siteName: "hearthgg", locale: "ko_KR", type: "website" },

@@ -21,4 +21,15 @@ test.describe("site chrome", () => {
     await expect(page).toHaveURL(/\/privacy$/);
     await expect(page.getByRole("heading", { level: 1, name: "개인정보처리방침" })).toBeVisible();
   });
+
+  test("serves robots.txt and a sitemap of the leaderboards", async ({ request }) => {
+    const robots = await (await request.get("/robots.txt")).text();
+    expect(robots).toMatch(/Disallow: \/api\//);
+    expect(robots).toMatch(/Sitemap: .+\/sitemap\.xml/);
+
+    const sitemap = await (await request.get("/sitemap.xml")).text();
+    expect(sitemap).toContain("/ap/arena</loc>");
+    expect(sitemap).toContain("/eu/battlegrounds</loc>");
+    expect(sitemap).toContain("/privacy</loc>");
+  });
 });
