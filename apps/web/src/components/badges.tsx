@@ -42,8 +42,8 @@ export function RankChip({ rank, className = "" }: { rank: number; className?: s
 }
 
 /** ▲3 / ▼2 / – / NEW, with the meaning spelled out for screen readers. */
-export function RankChangeBadge({ change }: { change: RankChange }) {
-  if (change === "new") return <span className="text-[10px] font-bold text-primary">NEW</span>;
+export function RankChangeBadge({ change, size = "sm" }: { change: RankChange; size?: "sm" | "lg" }) {
+  if (change === "new") return <span className={`${size === "lg" ? "text-base" : "text-[10px]"} font-bold text-primary`}>NEW</span>;
   if (change === 0) {
     return (
       <span className="text-subtle">
@@ -54,7 +54,7 @@ export function RankChangeBadge({ change }: { change: RankChange }) {
   }
   const up = change > 0;
   return (
-    <span className={`text-[11px] font-semibold tabular-nums ${up ? "text-success" : "text-danger"}`}>
+    <span className={`${size === "lg" ? "text-xl" : "text-[11px]"} font-semibold tabular-nums ${up ? "text-success" : "text-danger"}`}>
       <span aria-hidden>
         {up ? "▲" : "▼"}
         {Math.abs(change).toLocaleString("ko-KR")}

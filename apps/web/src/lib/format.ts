@@ -40,3 +40,17 @@ export function topPercent(rank: number, total: number): string {
 export function formatCount(count: number): string {
   return integer.format(count);
 }
+
+const KST_OFFSET_MS = 9 * 3_600_000;
+
+/** "day": one closing rank per day. "time": a rank recorded whenever it changed. */
+export type Granularity = "day" | "time";
+
+/** "10월 4일", plus "14:05" for measurements; always in Korea time. */
+export function formatPointTime(at: number, granularity: Granularity) {
+  const kst = new Date(at + KST_OFFSET_MS);
+  const day = `${kst.getUTCMonth() + 1}월 ${kst.getUTCDate()}일`;
+  if (granularity === "day") return day;
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${day} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`;
+}

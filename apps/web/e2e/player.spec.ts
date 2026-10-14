@@ -11,6 +11,16 @@ test.describe("player", () => {
     await expect(stats.filter({ hasText: /^8\.00$/ })).toBeVisible();
   });
 
+  test("summarizes movement since the last close and the best recorded rank per namesake", async ({ page }) => {
+    await page.goto("/ap/arena/56/sinah");
+    const [first, second] = [page.getByRole("listitem").filter({ hasText: "#1" }).first(), page.getByRole("listitem").filter({ hasText: "#33" }).first()];
+    await expect(first.getByText("10월 4일 마감 대비")).toBeVisible();
+    await expect(first).toContainText("변동 없음");
+    await expect(first).toContainText("최고 순위#1 10월 4일");
+    await expect(second).toContainText("1계단 상승");
+    await expect(second).toContainText("최고 순위#33 10월 5일");
+  });
+
   test("lists the same name on other boards", async ({ page }) => {
     await page.goto("/ap/arena/56/Sinah");
     await page.getByRole("link", { name: /SINAH/ }).click();

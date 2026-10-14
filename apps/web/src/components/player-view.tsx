@@ -3,11 +3,13 @@ import { TOP_PAGES } from "@hearthgg/core/refresh";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
-import { getPlayer } from "@/lib/data/queries";
-import { formatRating, topPercent } from "@/lib/format";
+import type { SnapshotRow } from "@hearthgg/core/snapshot";
+import { getHistory, getPlayer, getRankPoints } from "@/lib/data/queries";
+import { formatPointTime, formatRating, topPercent } from "@/lib/format";
 import { MODE_LABEL, RATING_LABEL, REGION_LABEL, seasonLabel } from "@/lib/labels";
 import { blizzardLeaderboardUrl, boardHref, playerHref } from "@/lib/routes";
-import { ModeBadge, RankChip, RegionBadge } from "./badges";
+import { trendSummary } from "@/lib/trend";
+import { ModeBadge, RankChangeBadge, RankChip, RegionBadge } from "./badges";
 import { Card, CardHeader, EmptyState, SkeletonRows } from "./card";
 import { PlayerHistory, PlayerHistorySkeleton } from "./player-history";
 import { RelativeTime } from "./relative-time";
@@ -18,6 +20,41 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
       <dt className="text-[12px] text-muted">{label}</dt>
       <dd className="text-xl font-bold tabular-nums text-foreground">{children}</dd>
     </div>
+  );
+}
+
+/** 전일 대비 / 최고 순위 for one namesake; streams in after the profile (shares the history queries). */
+async function EntryTrendStats({
+  board,
+  seasonId,
+  name,
+  entry,
+  observedAt,
+}: {
+  board: Board;
+  seasonId: number;
+  name: string;
+  entry: SnapshotRow;
+  observedAt: number | null;
+}) {
+  const [daily, points] = await Promise.all([
+    getHistory(board.region, board.mode, seasonId, name),
+    getRankPoints(board.region, board.mode, seasonId, name),
+  ]);
+  const { best, change, baselineDay } = trendSummary({ daily, points, entry, observedAt });
+  return (
+    <>
+      {change !== null && baselineDay ? (
+        <Stat label={`${formatPointTime(Date.parse(baselineDay), "day")} 마감 대비`}>
+          <RankChangeBadge change={change} size="lg" />
+        </Stat>
+      ) : null}
+      {best ? (
+        <Stat label="최고 순위">
+          #{best.rank.toLocaleString("ko-KR")} <span className="text-[12px] font-normal text-muted">{formatPointTime(best.at, "day")}</span>
+        </Stat>
+      ) : null}
+    </>
   );
 }
 
@@ -75,21 +112,27 @@ export async function PlayerView({ board, seasonId, name }: { board: Board; seas
               </p>
             ) : null}
             <ul className="divide-y divide-border-subtle border-t border-border">
-              {entries.map(([rank, , rating]) => (
-                <li key={rank} className="flex flex-wrap items-center gap-x-10 gap-y-3 px-5 py-4">
-                  <dl className="flex gap-10">
-                    <Stat label="순위">#{rank.toLocaleString("ko-KR")}</Stat>
-                    {ratingLabel ? <Stat label={ratingLabel}>{formatRating(board.mode, rating)}</Stat> : null}
-                    <Stat label="백분위">{topPercent(rank, pointer.totalSize ?? rank)}</Stat>
-                  </dl>
-                  <Link
-                    href={`${boardHref(board, { ...seasonQuery, page: pageOfRank(rank) })}${pageOfRank(rank) > 1 ? "&" : "?"}highlight=${rank}#rank-${rank}`}
-                    className="ml-auto rounded bg-primary px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-primary-strong"
-                  >
-                    랭킹에서 보기
-                  </Link>
-                </li>
-              ))}
+              {entries.map((entry) => {
+                const [rank, , rating] = entry;
+                return (
+                  <li key={rank} className="flex flex-wrap items-center gap-x-10 gap-y-3 px-5 py-4">
+                    <dl className="flex flex-wrap gap-x-8 gap-y-3">
+                      <Stat label="순위">#{rank.toLocaleString("ko-KR")}</Stat>
+                      {ratingLabel ? <Stat label={ratingLabel}>{formatRating(board.mode, rating)}</Stat> : null}
+                      <Stat label="백분위">{topPercent(rank, pointer.totalSize ?? rank)}</Stat>
+                      <Suspense fallback={null}>
+                        <EntryTrendStats board={board} seasonId={seasonId} name={name} entry={entry} observedAt={pointer.generatedAt} />
+                      </Suspense>
+                    </dl>
+                    <Link
+                      href={`${boardHref(board, { ...seasonQuery, page: pageOfRank(rank) })}${pageOfRank(rank) > 1 ? "&" : "?"}highlight=${rank}#rank-${rank}`}
+                      className="ml-auto rounded bg-primary px-3 py-1.5 text-[13px] font-semibold text-white hover:bg-primary-strong"
+                    >
+                      랭킹에서 보기
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </>
         )}

@@ -3,17 +3,15 @@
 import type { Mode } from "@hearthgg/core/domain";
 import type { RankPoint } from "@hearthgg/core/history";
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
-import { formatRating } from "@/lib/format";
+import { formatPointTime, formatRating, type Granularity } from "@/lib/format";
 import { RATING_LABEL } from "@/lib/labels";
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
-const KST_OFFSET_MS = 9 * HOUR_MS;
 /** Live history can hold thousands of changes; the table lists the latest ones. */
 const LIVE_TABLE_ROWS = 100;
 
-/** "day": one closing rank per day. "time": a rank recorded whenever it changed. */
-export type Granularity = "day" | "time";
+
 const MARGIN = { top: 14, right: 44, bottom: 26, left: 48 };
 const HEIGHT = 220;
 
@@ -65,15 +63,6 @@ export function chartModel(
 
 function round(value: number) {
   return Math.round(value * 10) / 10;
-}
-
-/** "10월 4일", plus "14:05" for measurements; always in Korea time. */
-export function formatPointTime(at: number, granularity: Granularity) {
-  const kst = new Date(at + KST_OFFSET_MS);
-  const day = `${kst.getUTCMonth() + 1}월 ${kst.getUTCDate()}일`;
-  if (granularity === "day") return day;
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${day} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`;
 }
 
 const COPY = {
