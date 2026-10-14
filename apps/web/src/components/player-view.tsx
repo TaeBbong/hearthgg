@@ -14,6 +14,7 @@ import { Card, CardHeader, EmptyState, SkeletonRows } from "./card";
 import { PlayerHistory, PlayerHistorySkeleton } from "./player-history";
 import { RelativeTime } from "./relative-time";
 import { FavoriteButton, RecordVisit } from "./saved-players";
+import { ShareButton } from "./share-button";
 
 function Stat({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -85,6 +86,10 @@ export async function PlayerView({ board, seasonId, name }: { board: Board; seas
               {entries.length > 0 ? (
                 <>
                   <FavoriteButton player={{ ...board, name: displayName }} />
+                  <ShareButton
+                    title={`${displayName} - ${REGION_LABEL[board.region]} ${MODE_LABEL[board.mode]} | hearthgg`}
+                    text={`${displayName} · ${REGION_LABEL[board.region]} ${MODE_LABEL[board.mode]} ${entries[0]![0].toLocaleString("ko-KR")}위`}
+                  />
                   <RecordVisit player={{ ...board, name: displayName }} />
                 </>
               ) : null}

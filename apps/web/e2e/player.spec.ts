@@ -37,6 +37,30 @@ test.describe("player", () => {
     await expect(favorites).toHaveCount(0);
   });
 
+  test("shares the player link through the system share sheet", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "share", { value: async (data: ShareData) => void ((window as never as { shared: ShareData }).shared = data) });
+      Object.defineProperty(navigator, "canShare", { value: () => true });
+    });
+    await page.goto("/ap/arena/56/sinah");
+    await page.getByRole("button", { name: "공유" }).click();
+    const shared = await page.evaluate(() => (window as never as { shared: ShareData }).shared);
+    expect(shared).toMatchObject({ url: expect.stringMatching(/\/ap\/arena\/56\/sinah$/), text: "Sinah · 아시아·태평양 투기장 1위" });
+  });
+
+  test("copies the player link where there is no share sheet", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "share", { value: undefined });
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: async (text: string) => void ((window as never as { copied: string }).copied = text) },
+      });
+    });
+    await page.goto("/ap/arena/56/sinah");
+    await page.getByRole("button", { name: "공유" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "링크를 복사했습니다" })).toBeVisible();
+    expect(await page.evaluate(() => (window as never as { copied: string }).copied)).toMatch(/\/ap\/arena\/56\/sinah$/);
+  });
+
   test("lists the same name on other boards", async ({ page }) => {
     await page.goto("/ap/arena/56/Sinah");
     await page.getByRole("link", { name: /SINAH/ }).click();
