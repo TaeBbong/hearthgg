@@ -13,6 +13,7 @@ import { ModeBadge, RankChangeBadge, RankChip, RegionBadge } from "./badges";
 import { Card, CardHeader, EmptyState, SkeletonRows } from "./card";
 import { PlayerHistory, PlayerHistorySkeleton } from "./player-history";
 import { RelativeTime } from "./relative-time";
+import { FavoriteButton, RecordVisit } from "./saved-players";
 
 function Stat({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -79,7 +80,15 @@ export async function PlayerView({ board, seasonId, name }: { board: Board; seas
               <ModeBadge mode={board.mode} />
               <span className="text-[12px] text-muted">{seasonLabel(seasonId)}</span>
             </div>
-            <h1 className="break-all text-2xl font-extrabold text-foreground">{displayName}</h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h1 className="break-all text-2xl font-extrabold text-foreground">{displayName}</h1>
+              {entries.length > 0 ? (
+                <>
+                  <FavoriteButton player={{ ...board, name: displayName }} />
+                  <RecordVisit player={{ ...board, name: displayName }} />
+                </>
+              ) : null}
+            </div>
             {dataTime ? (
               <p className="text-[12px] text-muted">
                 <RelativeTime time={dataTime} /> 수집된 {REGION_LABEL[board.region]} 리더보드 기준

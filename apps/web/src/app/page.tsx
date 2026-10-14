@@ -1,7 +1,18 @@
+import { boardId, type BoardId } from "@hearthgg/core/domain";
 import { Suspense } from "react";
 import { BoardOverview, BoardOverviewSkeleton } from "@/components/board-overview";
 import { Logo } from "@/components/logo";
+import { SavedPlayers } from "@/components/saved-players";
 import { SearchBox } from "@/components/search-box";
+import { getBoardStatus } from "@/lib/data/queries";
+
+/** Favorites and recent players link to each board's current season, known only on the server. */
+async function SavedPlayersSection() {
+  const currentSeasons: Partial<Record<BoardId, number>> = Object.fromEntries(
+    (await getBoardStatus()).map((pointer) => [boardId(pointer), pointer.seasonId]),
+  );
+  return <SavedPlayers currentSeasons={currentSeasons} />;
+}
 
 export default function HomePage() {
   return (
@@ -16,6 +27,9 @@ export default function HomePage() {
         <div className="w-full max-w-[640px]">
           <SearchBox size="lg" />
         </div>
+        <Suspense fallback={null}>
+          <SavedPlayersSection />
+        </Suspense>
       </section>
       <Suspense fallback={<BoardOverviewSkeleton />}>
         <BoardOverview />

@@ -21,6 +21,22 @@ test.describe("player", () => {
     await expect(second).toContainText("최고 순위#33 10월 5일");
   });
 
+  test("remembers favorites and recently viewed players on the home page", async ({ page }) => {
+    await page.goto("/ap/arena/56/sinah");
+    await page.getByRole("button", { name: "즐겨찾기" }).click();
+    await page.goto("/eu/standard/156/SINAH");
+    await page.goto("/");
+
+    const favorites = page.getByRole("region", { name: "즐겨찾기" });
+    await expect(favorites.getByRole("link", { name: /Sinah/ })).toHaveAttribute("href", "/ap/arena/56/Sinah");
+    const recent = page.getByRole("region", { name: "최근 본 플레이어" });
+    await expect(recent.getByRole("link")).toHaveCount(2);
+    await expect(recent.getByRole("link").first()).toHaveAttribute("href", "/eu/standard/156/SINAH");
+
+    await favorites.getByRole("button", { name: "Sinah 즐겨찾기 해제" }).click();
+    await expect(favorites).toHaveCount(0);
+  });
+
   test("lists the same name on other boards", async ({ page }) => {
     await page.goto("/ap/arena/56/Sinah");
     await page.getByRole("link", { name: /SINAH/ }).click();
