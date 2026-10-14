@@ -85,6 +85,9 @@ Next.js (OpenNext on Workers) ── 스냅샷을 isolate LRU에 파싱해 두�
 - **데이터 계층**: 파싱한 스냅샷 인덱스는 불변 키 기준의 isolate LRU에, 보드 포인터는 30초 TTL로 캐시합니다. 요청 안의 중복 호출은 `React.cache`로 합칩니다. Workers에서는 다른 요청이 만든 진행 중 Promise를 공유하면 안 되므로, 요청 간 캐시에는 완료된 값만 둡니다.
 - **검색**: 대소문자를 무시하는 NFKC 정규화 후 부분 일치이며, 정확히 일치 > 접두 일치 > 포함 순, 같으면 순위, 그다음 보드 순서(아시아·태평양 > 아메리카 > 유럽)로 정렬합니다. 전 보드를 메모리에서 스캔합니다.
 - **표시 순서**: 지역은 어디서나 아시아·태평양, 아메리카, 유럽 순입니다(`REGIONS`, `compareBoards`). D1의 `ORDER BY region`은 알파벳순이므로 서비스 계층에서 다시 정렬합니다.
+- **순위 변동·컷**: 리더보드 페이지는 그 페이지 25명의 이름만으로 직전 마감일(`history_days`)의 `rank_history`를 조회해 변동을 계산하고, 스냅샷 키·페이지 단위로 캐시합니다. 동명이인은 가장 가까운 직전 순위끼리 짝짓습니다(`packages/core/src/standings.ts`). 컷 레이팅은 스냅샷에서 바로 읽습니다.
+- **즐겨찾기·최근 본 플레이어**: 계정이 없으므로 브라우저 `localStorage`에만 저장하고 `useSyncExternalStore`로 읽어 하이드레이션과 탭 간 동기화를 맞춥니다. 시즌은 저장하지 않고, 홈이 서버에서 넘겨준 현재 시즌으로 링크합니다.
+- **공유 이미지**: Next.js `opengraph-image` 규칙을 쓰고, OpenNext가 `@vercel/og`를 Workers용 빌드로 바꿉니다. 이름은 어떤 문자든 올 수 있어 CJK 폰트를 번들하지 않고, Google Fonts에서 필요한 글자만(`text=`) 받아 씁니다.
 - **렌더링**: 데이터 영역은 `<Suspense>`로 스트리밍합니다. 지역·모드·시즌 파라미터는 레이아웃에서 먼저 검증해, 잘못된 주소는 실제 404 상태를 반환합니다.
 - **Cache Components를 끈 이유**: Next.js 16의 `cacheComponents`는 OpenNext로 Workers 런타임에서 실행하면 요청이 멈추는 문제가 있습니다([vercel/next.js#94880](https://github.com/vercel/next.js/issues/94880), [opennextjs-cloudflare#1225](https://github.com/opennextjs/opennextjs-cloudflare/issues/1225), [#1369](https://github.com/opennextjs/opennextjs-cloudflare/issues/1369)). 페이지는 이미 스트리밍 구조라, 문제가 해결되면 `next.config.ts`의 플래그만 켜면 정적 셸 사전 렌더링이 추가됩니다.
 
