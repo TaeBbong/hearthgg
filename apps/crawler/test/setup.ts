@@ -8,6 +8,7 @@ beforeEach(async () => {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM boards"),
     env.DB.prepare("DELETE FROM rank_history"),
+    env.DB.prepare("DELETE FROM rank_points"),
     env.DB.prepare("DELETE FROM history_days"),
     env.DB.prepare("DELETE FROM upstream_state"),
     env.DB.prepare("DELETE FROM request_budget"),

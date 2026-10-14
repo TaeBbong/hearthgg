@@ -227,6 +227,31 @@ describe("runCrawl", () => {
     expect(snapshot.deepGeneratedAt).toBe(1_000);
   });
 
+  it("records every row as rank points on a board's first snapshot, then only names that moved", async () => {
+    const store = await prepare();
+    const deps = { db: env.DB, bucket: env.SNAPSHOTS, fetch: blizzard.fetch, now: () => NOW };
+    await runCrawl(params({ startedAt: 1_000 }), inlineStep().step, deps);
+
+    // Two players swap places; everyone else keeps their rank.
+    const swapped = names(120);
+    [swapped[0], swapped[1]] = [swapped[1]!, swapped[0]!];
+    blizzard.boards["AP:wild"] = { seasonId: 156, names: swapped };
+    await store.acquireLock(board, 156, "run-2", NOW + 120_000, 60_000);
+    await runCrawl(params({ runId: "run-2", kind: "top", pages: 2, startedAt: 2_000 }), inlineStep().step, deps);
+
+    const { results } = await env.DB.prepare("SELECT at, COUNT(*) AS n FROM rank_points WHERE region = 'AP' AND mode = 'wild' GROUP BY at").all();
+    expect(results).toEqual([
+      { at: 1_000, n: 120 },
+      { at: 2_000, n: 2 },
+    ]);
+    const moved = await env.DB.prepare("SELECT name, rank, rating FROM rank_points WHERE at = 2000 ORDER BY rank").all();
+    // The fake board rates by position on the page, so the swap also swaps ratings.
+    expect(moved.results).toEqual([
+      { name: "player2", rank: 1, rating: 100 },
+      { name: "player1", rank: 2, rating: 99 },
+    ]);
+  });
+
   it("refuses a top refresh when there is no previous snapshot to merge into", async () => {
     await prepare();
     await expect(

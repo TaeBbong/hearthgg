@@ -4,6 +4,7 @@ import {
   SnapshotIntegrityError,
   assembleSnapshot,
   boardId,
+  changedRows,
   chunk,
   deserializeSnapshot,
   fetchLeaderboardPage,
@@ -21,6 +22,7 @@ import { BoardStore } from "./board-store";
 import { BUDGET_WAIT_CAP_MS, CRAWL_BATCH_PAGES, CRAWL_CONCURRENCY, LOCK_LEASE_MS, MAX_BUDGET_WAITS } from "./limits";
 import { RequestBudget } from "./request-budget";
 import { blockAlert, boardFailureAlert, boardRecoveryNotice } from "./messages";
+import { recordRankPoints } from "./points";
 import { UpstreamGuard, throttleFactor } from "./upstream-guard";
 
 /** Consecutive failures that trigger one alert (not repeated until the board recovers). */
@@ -122,6 +124,7 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
 
     const result = await step.do("publish", async (): Promise<CrawlResult> => {
       let snapshot;
+      let previous;
       try {
         snapshot = assembleSnapshot({
           board,
@@ -131,17 +134,23 @@ export async function runCrawl(params: CrawlParams, step: CrawlStep, deps: Crawl
           expectedTotalSize: kind === "top" ? Math.min(params.expectedTotalSize, params.pages * PAGE_SIZE) : params.expectedTotalSize,
           pages,
         });
+        // The lock keeps this pointer stable until our publish below.
+        const previousKey = (await store.get(board, seasonId))?.snapshotKey;
+        const previousObject = previousKey ? await bucket.get(previousKey) : null;
+        previous = previousObject ? deserializeSnapshot(await previousObject.text()) : null;
         if (kind === "top") {
-          const previousKey = (await store.get(board, seasonId))?.snapshotKey;
-          const previous = previousKey ? await bucket.get(previousKey) : null;
           if (!previous) throw new NonRetryableError("Top refresh needs a previous snapshot to merge into");
-          snapshot = mergeTopRefresh(deserializeSnapshot(await previous.text()), snapshot, params.expectedTotalSize);
+          snapshot = mergeTopRefresh(previous, snapshot, params.expectedTotalSize);
         }
       } catch (error) {
         // Re-running the step would assemble the same pages again.
         if (error instanceof SnapshotIntegrityError) throw new NonRetryableError(error.message, error.name);
         throw error;
       }
+
+      // Points go in before the pointer swap: if publishing then fails, they are still
+      // genuine observations, and a retry re-inserts nothing (INSERT OR IGNORE).
+      await recordRankPoints(db, board, seasonId, snapshot.generatedAt, changedRows(previous, snapshot));
 
       const key = snapshotKey(snapshot);
       await bucket.put(key, serializeSnapshot(snapshot), { httpMetadata: { contentType: "application/json" } });
