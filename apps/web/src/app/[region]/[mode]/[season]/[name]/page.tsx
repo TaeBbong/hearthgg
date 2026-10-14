@@ -1,28 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { parsePositiveInt } from "@/components/board-view";
 import { PlayerView, PlayerViewSkeleton } from "@/components/player-view";
 import { MODE_LABEL, REGION_LABEL, seasonLabel } from "@/lib/labels";
-import { parseBoardParams } from "@/lib/routes";
-
-type Params = Awaited<PageProps<"/[region]/[mode]/[season]/[name]">["params"]>;
-
-/** Segments arrive percent-encoded; a stray "%" in a name must not crash the page. */
-function decodeName(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
-
-function parse(params: Params) {
-  const board = parseBoardParams(params);
-  const seasonId = parsePositiveInt(params.season);
-  if (!board || !seasonId) return null;
-  return { board, seasonId, name: decodeName(params.name) };
-}
+import { parsePlayerParams as parse } from "@/lib/player-params";
 
 export async function generateMetadata({ params }: PageProps<"/[region]/[mode]/[season]/[name]">): Promise<Metadata> {
   const parsed = parse(await params);

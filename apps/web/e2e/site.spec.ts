@@ -32,4 +32,14 @@ test.describe("site chrome", () => {
     expect(sitemap).toContain("/eu/battlegrounds</loc>");
     expect(sitemap).toContain("/privacy</loc>");
   });
+
+  test("gives player pages and the site a share image", async ({ page, request }) => {
+    for (const route of ["/ap/arena/56/sinah", "/"]) {
+      await page.goto(route);
+      const image = await page.locator('meta[property="og:image"]').first().getAttribute("content");
+      const response = await request.get(image!);
+      expect(response.status()).toBe(200);
+      expect(response.headers()["content-type"]).toBe("image/png");
+    }
+  });
 });
