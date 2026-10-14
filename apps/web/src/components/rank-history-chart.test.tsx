@@ -3,9 +3,16 @@ import { describe, expect, it } from "vitest";
 import { RankHistoryChart, chartModel, niceRankTicks } from "./rank-history-chart";
 
 const points = [
-  { day: "2026-10-01", rank: 40, rating: 6.5 },
-  { day: "2026-10-02", rank: 25, rating: 6.9 },
-  { day: "2026-10-04", rank: 12, rating: 7.3 },
+  { at: Date.parse("2026-10-01"), rank: 40, rating: 6.5 },
+  { at: Date.parse("2026-10-02"), rank: 25, rating: 6.9 },
+  { at: Date.parse("2026-10-04"), rank: 12, rating: 7.3 },
+];
+
+// 14:00, 14:10 and 15:05 KST on Oct 14.
+const live = [
+  { at: Date.UTC(2026, 9, 14, 5, 0), rank: 9, rating: null },
+  { at: Date.UTC(2026, 9, 14, 5, 10), rank: 7, rating: null },
+  { at: Date.UTC(2026, 9, 14, 6, 5), rank: 7, rating: null },
 ];
 
 describe("niceRankTicks", () => {
@@ -33,22 +40,28 @@ describe("chartModel", () => {
   it("starts the line at the first point", () => {
     expect(model.path.startsWith(`M${model.points[0]!.x},${model.points[0]!.y}`)).toBe(true);
   });
+
+  it("draws measurements as steps: a rank holds until the next change", () => {
+    const stepped = chartModel(live, { width: 400, height: 200 }, { stepped: true });
+    const [a, b] = stepped.points;
+    expect(stepped.path.startsWith(`M${a!.x},${a!.y}H${b!.x}V${b!.y}`)).toBe(true);
+  });
 });
 
 describe("RankHistoryChart", () => {
   it("explains when there is not enough history yet", () => {
-    render(<RankHistoryChart mode="arena" points={points.slice(0, 1)} />);
+    render(<RankHistoryChart mode="arena" granularity="day" points={points.slice(0, 1)} />);
     expect(screen.getByText(/기록이 쌓이는 중/)).toBeInTheDocument();
   });
 
   it("labels the latest rank directly and describes the chart", () => {
-    render(<RankHistoryChart mode="arena" points={points} />);
+    render(<RankHistoryChart mode="arena" granularity="day" points={points} />);
     expect(screen.getByRole("img", { name: /10월 1일부터 10월 4일까지 순위 40위에서 12위/ })).toBeInTheDocument();
     expect(screen.getByText("#12")).toBeInTheDocument();
   });
 
   it("offers every value as a table", () => {
-    render(<RankHistoryChart mode="arena" points={points} />);
+    render(<RankHistoryChart mode="arena" granularity="day" points={points} />);
     const table = screen.getByRole("table");
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(3);
@@ -57,8 +70,28 @@ describe("RankHistoryChart", () => {
     expect(rows[2]).toHaveTextContent("7.30");
   });
 
+  it("labels measurements with their KST time and explains when nothing changed yet", () => {
+    const { unmount } = render(<RankHistoryChart mode="standard" granularity="time" points={live} />);
+    expect(screen.getByRole("img", { name: /10월 14일 14:00부터 10월 14일 15:05까지 순위 9위에서 7위/ })).toBeInTheDocument();
+    const plot = screen.getByRole("group", { name: "시점별 순위 탐색" });
+    fireEvent.focus(plot);
+    fireEvent.keyDown(plot, { key: "ArrowLeft" });
+    expect(screen.getByRole("status", { name: "선택한 시점의 순위" })).toHaveTextContent("10월 14일 14:10");
+    unmount();
+
+    render(<RankHistoryChart mode="standard" granularity="time" points={live.slice(2)} />);
+    expect(screen.getByText(/순위가 바뀔 때마다 기록/)).toBeInTheDocument();
+  });
+
+  it("lists the latest measurements first in the table", () => {
+    render(<RankHistoryChart mode="standard" granularity="time" points={live} />);
+    const rows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
+    expect(rows[0]).toHaveTextContent("10월 14일 15:05");
+    expect(rows[2]).toHaveTextContent("10월 14일 14:00");
+  });
+
   it("shows a tooltip that keyboard users can move between days", () => {
-    render(<RankHistoryChart mode="arena" points={points} />);
+    render(<RankHistoryChart mode="arena" granularity="day" points={points} />);
     const plot = screen.getByRole("group", { name: "날짜별 순위 탐색" });
     fireEvent.focus(plot);
     expect(screen.getByRole("status")).toHaveTextContent("#12");

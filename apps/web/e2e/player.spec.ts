@@ -8,7 +8,7 @@ test.describe("player", () => {
     const stats = page.getByRole("definition");
     await expect(stats.filter({ hasText: /^#1$/ })).toBeVisible();
     await expect(stats.filter({ hasText: /^#33$/ })).toBeVisible();
-    await expect(page.getByText("8.00")).toBeVisible();
+    await expect(stats.filter({ hasText: /^8\.00$/ })).toBeVisible();
   });
 
   test("lists the same name on other boards", async ({ page }) => {

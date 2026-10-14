@@ -57,7 +57,7 @@ export async function seed() {
   });
   try {
     const { DB, SNAPSHOTS } = proxy.env;
-    for (const table of ["boards", "rank_history", "history_days", "upstream_state", "request_budget", "daily_reports"]) await DB.exec(`DROP TABLE IF EXISTS ${table}`);
+    for (const table of ["boards", "rank_history", "rank_points", "history_days", "upstream_state", "request_budget", "daily_reports"]) await DB.exec(`DROP TABLE IF EXISTS ${table}`);
     const migrations = (await readdir(path.join(root, "migrations"))).filter((file) => file.endsWith(".sql")).toSorted();
     for (const file of migrations) {
       const sql = await readFile(path.join(root, "migrations", file), "utf8");
@@ -97,6 +97,17 @@ export async function seed() {
       HISTORY_DAYS.flatMap((day, index) => [
         history.bind(day, [5, 3, 2, 1, 1][index]!, 7 + index / 10),
         history.bind(day, [40, 38, 35, 34, 33][index]!, 6 + index / 10),
+      ]),
+    );
+
+    // Intraday changes on the snapshot's day (13:00, 13:30, 14:20 KST); each time holds both namesakes.
+    const point = DB.prepare(
+      "INSERT INTO rank_points (region, mode, season_id, name, at, rank, rating) VALUES ('AP', 'arena', 56, 'sinah', ?, ?, ?)",
+    );
+    await DB.batch(
+      [GENERATED_AT - 120 * 60_000, GENERATED_AT - 90 * 60_000, GENERATED_AT - 40 * 60_000].flatMap((at, index) => [
+        point.bind(at, [3, 2, 1][index]!, 7.8 + index / 10),
+        point.bind(at, [36, 35, 33][index]!, 6.2 + index / 10),
       ]),
     );
   } finally {

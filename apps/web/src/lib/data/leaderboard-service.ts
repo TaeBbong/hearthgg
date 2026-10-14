@@ -1,5 +1,5 @@
 import { boardId, compareBoards, type Board } from "@hearthgg/core/domain";
-import type { HistoryPoint } from "@hearthgg/core/history";
+import type { HistoryPoint, RankPoint } from "@hearthgg/core/history";
 import { normalizeName } from "@hearthgg/core/normalize";
 import { buildSearchIndex, findExact, search, type SearchHit, type SearchIndex, type SearchResult } from "@hearthgg/core/search";
 import { deserializeSnapshot, slicePage, type SnapshotRow } from "@hearthgg/core/snapshot";
@@ -16,6 +16,8 @@ export interface ServiceCaches {
   indexes: TtlLru<string, SearchIndex>;
   /** Daily history only changes once a day; keyed by board, season and normalized name. */
   history: TtlLru<string, HistoryPoint[]>;
+  /** Rank points change with every publish; keyed by the snapshot they were read against. */
+  points: TtlLru<string, RankPoint[]>;
 }
 
 export interface LeaderboardPage {
@@ -137,6 +139,17 @@ export class LeaderboardService {
   /** Current boards with their top `limit` rows, for the home page. */
   async overview(limit = 3): Promise<Array<{ pointer: BoardPointer; top: SnapshotRow[] }>> {
     return (await this.currentIndexes()).map(({ pointer, index }) => ({ pointer, top: index.snapshot.rows.slice(0, limit) }));
+  }
+
+  async points(board: Board, seasonId: number, name: string): Promise<RankPoint[]> {
+    const version = (await this.find(board, seasonId))?.pointer.generatedAt ?? 0;
+    const normalized = normalizeName(name);
+    const key = `${boardId(board)}:${seasonId}:${normalized}@${version}`;
+    const cached = this.caches.points.get(key, this.now());
+    if (cached) return cached;
+    const points = await this.store.readPoints(board, seasonId, normalized);
+    this.caches.points.set(key, points, this.now());
+    return points;
   }
 
   async history(board: Board, seasonId: number, name: string): Promise<HistoryPoint[]> {

@@ -1,5 +1,5 @@
 import type { Board, Mode, Region } from "@hearthgg/core/domain";
-import type { HistoryPoint } from "@hearthgg/core/history";
+import type { HistoryPoint, RankPoint } from "@hearthgg/core/history";
 
 /** Read model of a crawled board, as published by the crawler. */
 export interface BoardPointer {
@@ -21,6 +21,8 @@ export interface LeaderboardStore {
   readSnapshot(key: string): Promise<string | null>;
   /** Daily closing ranks for a normalized name; several per day when namesakes exist. */
   readHistory(board: Board, seasonId: number, normalizedName: string): Promise<HistoryPoint[]>;
+  /** Ranks recorded whenever a name's ranks changed, oldest first; namesakes share each timestamp. */
+  readPoints(board: Board, seasonId: number, normalizedName: string): Promise<RankPoint[]>;
   /** End of the crawler's upstream block (epoch ms) if it is still in effect at `now`. */
   readUpstreamBlock(now: number): Promise<number | null>;
 }

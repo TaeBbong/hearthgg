@@ -51,6 +51,7 @@ function setup() {
           ]
         : [],
     ),
+    readPoints: vi.fn(async (_board, _seasonId, name: string) => (name === "sinah" ? [{ at: NOW - 600_000, rank: 1, rating: 7 }] : [])),
     readSnapshot: vi.fn(async (key: string) => {
       const found = snapshots.find((s) => pointer(s).snapshotKey === key);
       return found ? serializeSnapshot(found) : null;
@@ -60,6 +61,7 @@ function setup() {
     pointers: new TtlLru({ maxEntries: 1, ttlMs: 30_000 }),
     indexes: new TtlLru({ maxEntries: 10 }),
     history: new TtlLru({ maxEntries: 10, ttlMs: 600_000 }),
+    points: new TtlLru({ maxEntries: 10, ttlMs: 600_000 }),
   };
   let now = NOW;
   const service = new LeaderboardService(store, caches, () => now);
@@ -159,6 +161,20 @@ describe("LeaderboardService", () => {
     await service.history(board, 56, "Sinah");
     expect(store.readHistory).toHaveBeenCalledTimes(1);
     expect(store.readHistory).toHaveBeenCalledWith(board, 56, "sinah");
+  });
+
+  it("reads rank points by normalized name and refetches once a newer snapshot is published", async () => {
+    const { service, store, pointers, advance } = setup();
+    const board = { region: "AP", mode: "arena" } as const;
+    expect(await service.points(board, 56, "SINAH")).toEqual([{ at: NOW - 600_000, rank: 1, rating: 7 }]);
+    await service.points(board, 56, "Sinah");
+    expect(store.readPoints).toHaveBeenCalledTimes(1);
+
+    // The crawler publishes again: points cached for the old snapshot no longer apply.
+    pointers[0] = { ...pointers[0]!, generatedAt: NOW, snapshotKey: "snapshots/AP/arena/56/next.json" };
+    advance(31_000);
+    await service.points(board, 56, "sinah");
+    expect(store.readPoints).toHaveBeenCalledTimes(2);
   });
 
   it("reports while the crawler is paused by an upstream block", async () => {

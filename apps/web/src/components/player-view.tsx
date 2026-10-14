@@ -98,7 +98,7 @@ export async function PlayerView({ board, seasonId, name }: { board: Board; seas
       {entries.length > 0 ? (
         // Streams separately so the profile shows before the history query finishes.
         <Suspense fallback={<PlayerHistorySkeleton />}>
-          <PlayerHistory board={board} seasonId={seasonId} name={name} entries={entries} />
+          <PlayerHistory board={board} seasonId={seasonId} name={name} entries={entries} observedAt={pointer.generatedAt} />
         </Suspense>
       ) : null}
 
