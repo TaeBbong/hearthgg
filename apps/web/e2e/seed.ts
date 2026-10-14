@@ -99,6 +99,15 @@ export async function seed() {
         history.bind(day, [40, 38, 35, 34, 33][index]!, 6 + index / 10),
       ]),
     );
+    // Earlier closes are what the leaderboard's movement column compares with (10-04 for a 10-05 snapshot).
+    await DB.batch([
+      DB.prepare("INSERT INTO rank_history (region, mode, season_id, name, day, rank, rating) VALUES ('AP', 'arena', 56, 'other', '2026-10-04', 5, 7.5)"),
+      ...HISTORY_DAYS.map((day) =>
+        DB.prepare(
+          "INSERT INTO history_days (region, mode, season_id, day, archive_key, row_count, captured_at) VALUES ('AP', 'arena', 56, ?, ?, 3, ?)",
+        ).bind(day, `daily/AP/arena/56/${day}.json`, Date.parse(day)),
+      ),
+    ]);
 
     // Intraday changes on the snapshot's day (13:00, 13:30, 14:20 KST); each time holds both namesakes.
     const point = DB.prepare(

@@ -2,14 +2,19 @@ import { PAGE_SIZE, type Board } from "@hearthgg/core/domain";
 import { TOP_PAGES } from "@hearthgg/core/refresh";
 import { notFound } from "next/navigation";
 import { getLeaderboard } from "@/lib/data/queries";
-import { formatCount } from "@/lib/format";
-import { MODE_LABEL, REGION_LABEL } from "@/lib/labels";
+import { formatCount, formatRating } from "@/lib/format";
+import { MODE_LABEL, RATING_LABEL, REGION_LABEL } from "@/lib/labels";
 import { boardHref } from "@/lib/routes";
 import { Card, CardHeader, EmptyState, SkeletonRows } from "./card";
 import { Pagination } from "./pagination";
 import { RankTable } from "./rank-table";
 import { RelativeTime } from "./relative-time";
 import { SeasonSelect } from "./season-select";
+
+function formatDay(day: string) {
+  const [, month, date] = day.split("-");
+  return `${Number(month)}월 ${Number(date)}일`;
+}
 
 export function parsePositiveInt(value: string | string[] | undefined): number | undefined {
   const parsed = Number(Array.isArray(value) ? value[0] : value);
@@ -66,8 +71,32 @@ export async function BoardView({
           ) : null}
         </p>
       </CardHeader>
+      {data.cutoffs.length || data.changes ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-4 py-2 text-[12px] text-muted">
+          {data.cutoffs.length ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="font-medium">{RATING_LABEL[board.mode]} 컷</span>
+              <dl aria-label={`${RATING_LABEL[board.mode]} 컷`} className="flex flex-wrap gap-x-3 gap-y-1">
+                {data.cutoffs.map(({ rank, rating }) => (
+                  <div key={rank} className="flex gap-1">
+                    <dt>{formatCount(rank)}위</dt>
+                    <dd className="font-semibold tabular-nums text-foreground">{formatRating(board.mode, rating)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : null}
+          {data.changes ? <p className="ml-auto">변동: {formatDay(data.changes.day)} 마감 대비</p> : null}
+        </div>
+      ) : null}
       {data.rows.length ? (
-        <RankTable board={board} seasonId={data.seasonId} rows={data.rows} highlightRank={highlight} />
+        <RankTable
+          board={board}
+          seasonId={data.seasonId}
+          rows={data.rows}
+          highlightRank={highlight}
+          changes={data.changes?.changes}
+        />
       ) : (
         <EmptyState title="이 페이지에는 랭커가 없습니다" />
       )}

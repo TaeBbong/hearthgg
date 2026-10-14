@@ -14,6 +14,7 @@ const caches: ServiceCaches = {
   indexes: new TtlLru({ maxEntries: 24 }),
   history: new TtlLru({ maxEntries: 500, ttlMs: 10 * 60_000 }),
   points: new TtlLru({ maxEntries: 500, ttlMs: 10 * 60_000 }),
+  changes: new TtlLru({ maxEntries: 500 }),
 };
 
 const getService = cache(async () => {

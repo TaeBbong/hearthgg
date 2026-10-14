@@ -34,4 +34,22 @@ test.describe("leaderboard", () => {
     expect(response?.status()).toBe(404);
     await expect(page.getByText("페이지를 찾을 수 없습니다")).toBeVisible();
   });
+
+  test("shows rating cutoffs and movement since the last daily close", async ({ page }) => {
+    await page.goto("/ap/arena");
+    const cutoffs = page.locator('dl[aria-label="평균 승수 컷"]');
+    await expect(cutoffs).toContainText("1위8.00");
+    await expect(cutoffs).toContainText("10위7.55");
+    await expect(page.getByText("변동: 10월 4일 마감 대비")).toBeVisible();
+    const rows = page.getByRole("row");
+    await expect(rows.nth(1)).toContainText("변동 없음");
+    await expect(rows.nth(2)).toContainText("3계단 상승");
+    await expect(rows.nth(3)).toContainText("NEW");
+  });
+
+  test("leaves legend boards without cutoffs and boards without a close without movement", async ({ page }) => {
+    await page.goto("/eu/standard");
+    await expect(page.getByRole("columnheader", { name: "변동" })).toHaveCount(0);
+    await expect(page.locator('dl[aria-label$="컷"]')).toHaveCount(0);
+  });
 });

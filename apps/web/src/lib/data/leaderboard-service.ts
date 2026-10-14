@@ -1,8 +1,9 @@
 import { boardId, compareBoards, type Board } from "@hearthgg/core/domain";
-import type { HistoryPoint, RankPoint } from "@hearthgg/core/history";
+import { kstDay, type HistoryPoint, type RankPoint } from "@hearthgg/core/history";
 import { normalizeName } from "@hearthgg/core/normalize";
 import { buildSearchIndex, findExact, search, type SearchHit, type SearchIndex, type SearchResult } from "@hearthgg/core/search";
 import { deserializeSnapshot, slicePage, type SnapshotRow } from "@hearthgg/core/snapshot";
+import { rankChanges, ratingCutoffs, type Cutoff, type RankChange } from "@hearthgg/core/standings";
 import type { TtlLru } from "./lru";
 import type { BoardPointer, LeaderboardStore } from "./store";
 
@@ -18,6 +19,15 @@ export interface ServiceCaches {
   history: TtlLru<string, HistoryPoint[]>;
   /** Rank points change with every publish; keyed by the snapshot they were read against. */
   points: TtlLru<string, RankPoint[]>;
+  /** Movement per page, keyed by the immutable snapshot key and page. */
+  changes: TtlLru<string, PageChanges | null>;
+}
+
+export interface PageChanges {
+  /** Closing day the page is compared with. */
+  day: string;
+  /** Aligned with the page rows. */
+  changes: RankChange[];
 }
 
 export interface LeaderboardPage {
@@ -29,6 +39,10 @@ export interface LeaderboardPage {
   rows: SnapshotRow[];
   /** Data time of ranks below the refreshed top pages, when older than the top. */
   deepGeneratedAt: number | null;
+  /** Rating at milestone ranks; empty for boards without ratings. */
+  cutoffs: Cutoff[];
+  /** Movement since the last daily close; current seasons only. */
+  changes: PageChanges | null;
 }
 
 export interface PlayerView {
@@ -114,7 +128,21 @@ export class LeaderboardService {
       seasons: found.seasons,
       ...slice,
       deepGeneratedAt: index.snapshot.deepGeneratedAt ?? null,
+      cutoffs: ratingCutoffs(index.snapshot),
+      changes: found.pointer.isCurrent ? await this.pageChanges(found.pointer, slice.page, slice.rows) : null,
     };
+  }
+
+  private async pageChanges(pointer: BoardPointer, page: number, rows: SnapshotRow[]): Promise<PageChanges | null> {
+    if (!isPublished(pointer) || !rows.length) return null;
+    const key = `${pointer.snapshotKey}:${page}`;
+    const cached = this.caches.changes.get(key, this.now());
+    if (cached !== undefined) return cached;
+    const names = [...new Set(rows.map(([, accountId]) => normalizeName(accountId)))];
+    const closing = await this.store.readClosingRanks(pointer, pointer.seasonId, kstDay(pointer.generatedAt), names);
+    const changes = closing ? { day: closing.day, changes: rankChanges(rows, closing.ranks) } : null;
+    this.caches.changes.set(key, changes, this.now());
+    return changes;
   }
 
   async player(board: Board, seasonId: number, name: string): Promise<PlayerView | null> {

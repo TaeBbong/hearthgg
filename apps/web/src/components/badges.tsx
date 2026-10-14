@@ -1,4 +1,5 @@
 import type { Mode, Region } from "@hearthgg/core/domain";
+import type { RankChange } from "@hearthgg/core/standings";
 import { MODE_LABEL } from "@/lib/labels";
 
 const MODE_DOT: Record<Mode, string> = {
@@ -36,6 +37,31 @@ export function RankChip({ rank, className = "" }: { rank: number; className?: s
       } ${className}`}
     >
       {rank}
+    </span>
+  );
+}
+
+/** ▲3 / ▼2 / – / NEW, with the meaning spelled out for screen readers. */
+export function RankChangeBadge({ change }: { change: RankChange }) {
+  if (change === "new") return <span className="text-[10px] font-bold text-primary">NEW</span>;
+  if (change === 0) {
+    return (
+      <span className="text-subtle">
+        <span aria-hidden>–</span>
+        <span className="sr-only">변동 없음</span>
+      </span>
+    );
+  }
+  const up = change > 0;
+  return (
+    <span className={`text-[11px] font-semibold tabular-nums ${up ? "text-success" : "text-danger"}`}>
+      <span aria-hidden>
+        {up ? "▲" : "▼"}
+        {Math.abs(change).toLocaleString("ko-KR")}
+      </span>
+      <span className="sr-only">
+        {Math.abs(change).toLocaleString("ko-KR")}계단 {up ? "상승" : "하락"}
+      </span>
     </span>
   );
 }

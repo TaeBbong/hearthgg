@@ -30,6 +30,28 @@ describe("RankTable", () => {
     expect(screen.getAllByRole("columnheader")).toHaveLength(2);
   });
 
+  it("shows movement since the last close when given", () => {
+    render(
+      <RankTable
+        board={{ region: "AP", mode: "wild" }}
+        seasonId={156}
+        rows={[
+          [1, "a", null],
+          [2, "b", null],
+          [3, "c", null],
+          [4, "d", null],
+        ]}
+        changes={[3, -2, 0, "new"]}
+      />,
+    );
+    expect(screen.getByRole("columnheader", { name: "변동" })).toBeInTheDocument();
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows[0]).toHaveTextContent("3계단 상승");
+    expect(rows[1]).toHaveTextContent("2계단 하락");
+    expect(rows[2]).toHaveTextContent("변동 없음");
+    expect(rows[3]).toHaveTextContent("NEW");
+  });
+
   it("highlights the requested rank", () => {
     render(
       <RankTable

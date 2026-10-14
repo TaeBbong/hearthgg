@@ -51,6 +51,13 @@ function setup() {
           ]
         : [],
     ),
+    readClosingRanks: vi.fn(async (_board, _seasonId, beforeDay: string, names: string[]) => ({
+      day: "2026-10-04",
+      ranks: [
+        { name: "sinah", rank: 4 },
+        { name: "other", rank: 1 },
+      ].filter((row) => names.includes(row.name) && beforeDay === "2026-10-05"),
+    })),
     readPoints: vi.fn(async (_board, _seasonId, name: string) => (name === "sinah" ? [{ at: NOW - 600_000, rank: 1, rating: 7 }] : [])),
     readSnapshot: vi.fn(async (key: string) => {
       const found = snapshots.find((s) => pointer(s).snapshotKey === key);
@@ -62,6 +69,7 @@ function setup() {
     indexes: new TtlLru({ maxEntries: 10 }),
     history: new TtlLru({ maxEntries: 10, ttlMs: 600_000 }),
     points: new TtlLru({ maxEntries: 10, ttlMs: 600_000 }),
+    changes: new TtlLru({ maxEntries: 10 }),
   };
   let now = NOW;
   const service = new LeaderboardService(store, caches, () => now);
@@ -122,6 +130,24 @@ describe("LeaderboardService", () => {
     const page = await service.leaderboard({ region: "AP", mode: "arena" }, undefined, 2);
     expect(page).toMatchObject({ seasonId: 56, page: 2, totalPages: 2, seasons: [56, 55] });
     expect(page?.rows[0]?.[0]).toBe(26);
+  });
+
+  it("adds rating cutoffs and movement since the last daily close", async () => {
+    const { service, store } = setup();
+    const page = await service.leaderboard({ region: "AP", mode: "arena" }, undefined, 1);
+    expect(page?.cutoffs).toEqual([
+      { rank: 1, rating: 7 },
+      { rank: 10, rating: 6.1 },
+    ]);
+    // Snapshot data time is 2026-10-05 KST, so the baseline is an earlier closing day.
+    expect(page?.changes).toEqual({ day: "2026-10-04", changes: [3, -1, ...Array(23).fill("new")] });
+    await service.leaderboard({ region: "AP", mode: "arena" }, undefined, 1);
+    expect(store.readClosingRanks).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves past seasons without movement", async () => {
+    const { service } = setup();
+    expect((await service.leaderboard({ region: "AP", mode: "arena" }, 55, 1))?.changes).toBeNull();
   });
 
   it("serves a past season by id and returns null for unknown ones", async () => {

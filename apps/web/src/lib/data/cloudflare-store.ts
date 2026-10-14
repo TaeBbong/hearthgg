@@ -59,6 +59,23 @@ export class CloudflareStore implements LeaderboardStore {
     return results;
   }
 
+  async readClosingRanks({ region, mode }: Board, seasonId: number, beforeDay: string, names: string[]) {
+    const baseline = await this.db
+      .prepare("SELECT day FROM history_days WHERE region = ? AND mode = ? AND season_id = ? AND day < ? ORDER BY day DESC LIMIT 1")
+      .bind(region, mode, seasonId, beforeDay)
+      .first<{ day: string }>();
+    if (!baseline) return null;
+    // One primary-key lookup per name; json_each keeps it a single bound parameter.
+    const { results } = await this.db
+      .prepare(
+        `SELECT name, rank FROM rank_history
+         WHERE region = ?1 AND mode = ?2 AND season_id = ?3 AND day = ?4 AND name IN (SELECT value FROM json_each(?5))`,
+      )
+      .bind(region, mode, seasonId, baseline.day, JSON.stringify(names))
+      .all<{ name: string; rank: number }>();
+    return { day: baseline.day, ranks: results };
+  }
+
   async readPoints({ region, mode }: Board, seasonId: number, normalizedName: string): Promise<RankPoint[]> {
     const { results } = await this.db
       .prepare(

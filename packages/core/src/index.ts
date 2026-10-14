@@ -8,3 +8,4 @@ export * from "./refresh";
 export * from "./schedule";
 export * from "./search";
 export * from "./snapshot";
+export * from "./standings";
