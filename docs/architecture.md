@@ -33,6 +33,7 @@ Next.js (OpenNext on Workers) ── 스냅샷을 isolate LRU에 파싱해 두�
 - **아시아·태평양 우선**: 한국 커뮤니티를 먼저 대상으로 하므로 AP는 더 짧은 주기를 씁니다(상위 갱신 최소 5분, 변경이 없어도 30분, 전체 1시간). 정렬할 때 AP의 urgency는 2배로 치고, 같으면 AP > US > EU 순입니다. 총 요청 예산은 같고, 그 안에서 AP의 몫이 커지는 방식입니다.
 - **시즌 고정**: 수집 중 시즌이 바뀌어도 한 시즌의 데이터만 읽도록, 모든 페이지 요청에 probe가 본 `seasonId`를 붙입니다. 시즌이 바뀌면 끝난 시즌의 최종 순위를 한 번 더 수집합니다.
 - **무결성 검사**: 빠진 페이지, 짧은 중간 페이지, 페이지 위치와 맞지 않는 순위, 다른 시즌 데이터, 큰 크기 차이(2% 초과)가 있으면 게시하지 않습니다.
+  - 예외로, 완전히 빈 중간 페이지는 2개까지 그 순위만 빼고 게시합니다. Blizzard가 이웃 페이지는 정상인데 한 페이지만 비워 보내는 경우가 있어서입니다(2026년 10월 AP 투기장 140페이지, 공식 사이트도 같은 페이지에서 오류). 그 순위의 플레이어도 보드에는 있으므로 `totalSize`에는 포함합니다.
 
 ## 동시성과 일관성
 
@@ -53,7 +54,7 @@ Next.js (OpenNext on Workers) ── 스냅샷을 isolate LRU에 파싱해 두�
 ## 장애 대응과 알림
 
 - 비공식 API 응답은 zod로 검증하고, 실패하면 이전 스냅샷을 유지합니다.
-- 차단 중이거나 1시간 넘게 갱신이 없으면 모든 페이지 상단에 안내를 띄웁니다. 상태는 `/status`와 `/api/status`에서 볼 수 있습니다.
+- 차단 중이거나 1시간 넘게 갱신이 없으면 모든 페이지 상단에 안내를 띄웁니다. 상태는 `/status`와 `/api/status`에서 볼 수 있습니다. 공개 상태에는 연속 실패 횟수만 나가고, 오류 내용은 Discord 알림과 로그로만 확인합니다.
 - **Discord 알림** (`ALERT_WEBHOOK_URL` secret, 문구는 `apps/crawler/src/messages.ts`):
   - 장애: 한 보드가 3번 연속 실패했을 때, 블리자드 차단이 시작됐을 때 한 번씩 보냅니다.
   - 복구: 그 보드가 다시 게시됐을 때, 차단이 풀린 뒤 첫 요청이 성공했을 때 보냅니다.
@@ -88,6 +89,9 @@ Next.js (OpenNext on Workers) ── 스냅샷을 isolate LRU에 파싱해 두�
 - **순위 변동·컷**: 리더보드 페이지는 그 페이지 25명의 이름만으로 직전 마감일(`history_days`)의 `rank_history`를 조회해 변동을 계산하고, 스냅샷 키·페이지 단위로 캐시합니다. 동명이인은 가장 가까운 직전 순위끼리 짝짓습니다(`packages/core/src/standings.ts`). 컷 레이팅은 스냅샷에서 바로 읽습니다.
 - **즐겨찾기·최근 본 플레이어**: 계정이 없으므로 브라우저 `localStorage`에만 저장하고 `useSyncExternalStore`로 읽어 하이드레이션과 탭 간 동기화를 맞춥니다. 시즌은 저장하지 않고, 홈이 서버에서 넘겨준 현재 시즌으로 링크합니다.
 - **공유 이미지**: Next.js `opengraph-image` 규칙을 쓰고, OpenNext가 `@vercel/og`를 Workers용 빌드로 바꿉니다. 이름은 어떤 문자든 올 수 있어 CJK 폰트를 번들하지 않고, Google Fonts에서 필요한 글자만(`text=`) 받아 씁니다.
+- **요청 제한**: `apps/web/worker.ts`가 OpenNext 워커를 감싸는 커스텀 엔트리로, Next.js가 렌더링하기 전에 Workers Rate Limiting 바인딩으로 IP당 요청 수를 제한합니다(자동완성 분당 120회, 그 외 분당 600회, 초과 시 429). 페이지 한도는 링크 prefetch를 감안해 넉넉하게 잡았습니다. workers.dev에서는 Worker 응답이 CDN에 캐시되지 않으므로 `s-maxage`는 브라우저 캐시 외에는 효과가 없습니다.
+- **입력 제한**: 플레이어 이름은 디코딩 후 32자를 넘으면 404입니다. 배틀태그 이름은 12자 이하라 정상 이름에는 영향이 없고, 임의 문구로 공유 이미지를 끝없이 새로 그리게 하는 요청을 막습니다.
+- **보안 헤더**: `next.config.ts`에서 `frame-ancestors 'none'`(+`X-Frame-Options`), `nosniff`, `Referrer-Policy`, HSTS를 붙이고 `x-powered-by`를 끕니다. 인라인 스크립트 때문에 전체 CSP는 nonce(=동적 렌더링)가 필요해 적용하지 않았습니다.
 - **렌더링**: 데이터 영역은 `<Suspense>`로 스트리밍합니다. 지역·모드·시즌 파라미터는 레이아웃에서 먼저 검증해, 잘못된 주소는 실제 404 상태를 반환합니다.
 - **Cache Components를 끈 이유**: Next.js 16의 `cacheComponents`는 OpenNext로 Workers 런타임에서 실행하면 요청이 멈추는 문제가 있습니다([vercel/next.js#94880](https://github.com/vercel/next.js/issues/94880), [opennextjs-cloudflare#1225](https://github.com/opennextjs/opennextjs-cloudflare/issues/1225), [#1369](https://github.com/opennextjs/opennextjs-cloudflare/issues/1369)). 페이지는 이미 스트리밍 구조라, 문제가 해결되면 `next.config.ts`의 플래그만 켜면 정적 셸 사전 렌더링이 추가됩니다.
 
