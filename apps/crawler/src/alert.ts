@@ -8,7 +8,8 @@ export function createAlert(webhookUrl: string | undefined, fetchFn: typeof fetc
     const response = await fetchFn(webhookUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ content: message }),
+      // Messages quote upstream errors; never let their text mention @everyone or a role.
+      body: JSON.stringify({ content: message, allowed_mentions: { parse: [] } }),
     });
     if (!response.ok) console.error(`alert webhook responded ${response.status}`);
   };
