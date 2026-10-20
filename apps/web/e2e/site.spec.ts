@@ -52,4 +52,13 @@ test.describe("site chrome", () => {
     expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
     expect(headers["strict-transport-security"]).toBe("max-age=63072000; includeSubDomains");
   });
+
+  test("reports crawl health without internal error details", async ({ request }) => {
+    const { boards } = (await (await request.get("/api/status")).json()) as { boards: Record<string, unknown>[] };
+    expect(boards.length).toBeGreaterThan(0);
+    for (const board of boards) {
+      expect(board).toHaveProperty("consecutiveFailures");
+      expect(board).not.toHaveProperty("lastError");
+    }
+  });
 });

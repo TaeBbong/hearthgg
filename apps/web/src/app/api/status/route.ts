@@ -1,7 +1,7 @@
 import { boardId } from "@hearthgg/core/domain";
 import { getBoardStatus, getUpstreamBlock } from "@/lib/data/queries";
 
-/** Machine-readable crawl health for uptime checks. */
+/** Machine-readable crawl health for uptime checks; error details stay in the crawler's alerts and logs. */
 export async function GET() {
   const [boards, upstreamBlockedUntil] = await Promise.all([getBoardStatus(), getUpstreamBlock()]);
   return Response.json(
@@ -14,7 +14,6 @@ export async function GET() {
         generatedAt: board.generatedAt,
         lastSuccessAt: board.lastSuccessAt,
         consecutiveFailures: board.consecutiveFailures,
-        lastError: board.lastError,
       })),
     },
     { headers: { "cache-control": "no-store" } },

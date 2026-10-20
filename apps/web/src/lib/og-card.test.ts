@@ -10,7 +10,6 @@ const pointer = {
   generatedAt: Date.UTC(2026, 9, 14, 9, 45), // 18:45 KST
   totalSize: 11_360,
   lastSuccessAt: null,
-  lastError: null,
   consecutiveFailures: 0,
 } as const;
 

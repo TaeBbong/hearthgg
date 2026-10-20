@@ -11,7 +11,6 @@ export interface BoardPointer {
   generatedAt: number | null;
   totalSize: number | null;
   lastSuccessAt: number | null;
-  lastError: string | null;
   consecutiveFailures: number;
 }
 

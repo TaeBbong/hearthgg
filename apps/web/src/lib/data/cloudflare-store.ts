@@ -12,7 +12,6 @@ interface BoardRow {
   generated_at: number | null;
   total_size: number | null;
   last_success_at: number | null;
-  last_error: string | null;
   consecutive_failures: number;
 }
 
@@ -27,7 +26,7 @@ export class CloudflareStore implements LeaderboardStore {
     const { results } = await this.db
       .prepare(
         `SELECT region, mode, season_id, is_current, snapshot_key, generated_at, total_size,
-                last_success_at, last_error, consecutive_failures
+                last_success_at, consecutive_failures
          FROM boards
          WHERE snapshot_key IS NOT NULL OR is_current = 1
          ORDER BY region, mode, season_id DESC`,
@@ -42,7 +41,6 @@ export class CloudflareStore implements LeaderboardStore {
       generatedAt: row.generated_at,
       totalSize: row.total_size,
       lastSuccessAt: row.last_success_at,
-      lastError: row.last_error,
       consecutiveFailures: row.consecutive_failures,
     }));
   }

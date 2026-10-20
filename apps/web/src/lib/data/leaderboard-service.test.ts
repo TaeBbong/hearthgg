@@ -28,7 +28,6 @@ function pointer(s: Snapshot, isCurrent = true): BoardPointer {
     generatedAt: s.generatedAt,
     totalSize: s.totalSize,
     lastSuccessAt: NOW - 30_000,
-    lastError: null,
     consecutiveFailures: 0,
   };
 }

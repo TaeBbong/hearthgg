@@ -44,7 +44,7 @@ async function StatusTable() {
             <td className="py-2 text-right tabular-nums">{formatCount(board.totalSize ?? 0)}</td>
             <td className="py-2 pr-4 text-right">
               {board.consecutiveFailures > 0 ? (
-                <span className="font-semibold text-danger" title={board.lastError ?? undefined}>
+                <span className="font-semibold text-danger">
                   실패 {board.consecutiveFailures}회 ·{" "}
                 </span>
               ) : null}
