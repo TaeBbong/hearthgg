@@ -6,6 +6,22 @@ const nextConfig: NextConfig = {
   // (vercel/next.js#94880, opennextjs-cloudflare#1225, #1369). Pages already stream
   // through <Suspense>, so turning it on later only adds the prerendered shell.
   transpilePackages: ["@hearthgg/core"],
+  poweredByHeader: false,
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          // Nothing here is meant to be framed; X-Frame-Options covers browsers without frame-ancestors.
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

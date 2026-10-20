@@ -42,4 +42,14 @@ test.describe("site chrome", () => {
       expect(response.headers()["content-type"]).toBe("image/png");
     }
   });
+
+  test("sends security headers and does not advertise the framework", async ({ request }) => {
+    const headers = (await request.get("/")).headers();
+    expect(headers["x-powered-by"]).toBeUndefined();
+    expect(headers["content-security-policy"]).toBe("frame-ancestors 'none'");
+    expect(headers["x-frame-options"]).toBe("DENY");
+    expect(headers["x-content-type-options"]).toBe("nosniff");
+    expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+    expect(headers["strict-transport-security"]).toBe("max-age=63072000; includeSubDomains");
+  });
 });
