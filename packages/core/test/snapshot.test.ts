@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseLeaderboardPage, type LeaderboardPage } from "../src/blizzard";
+import { PAGE_SIZE } from "../src/domain";
 import {
   SnapshotIntegrityError,
   assembleSnapshot,
@@ -52,6 +53,22 @@ describe("assembleSnapshot", () => {
       entry.page === 2 ? { ...entry, data: { ...entry.data, rows: entry.data.rows.slice(0, 10) } } : entry,
     );
     expect(() => assembleSnapshot(input({ pages: broken }))).toThrow(/page 2/);
+  });
+
+  it("leaves out a page Blizzard serves empty mid-board", () => {
+    const glitched = input().pages.map((entry) => (entry.page === 2 ? { ...entry, data: { ...entry.data, rows: [] } } : entry));
+    const snapshot = assembleSnapshot(input({ pages: glitched }));
+    expect(slicePage(snapshot, 2).rows).toEqual([]);
+    expect(slicePage(snapshot, 3).rows[0]?.[0]).toBe(2 * PAGE_SIZE + 1);
+    // The board still has those players; only their page is unavailable.
+    expect(snapshot.totalSize).toBe(expectedTotalSize);
+  });
+
+  it("rejects more empty pages than an upstream glitch explains", () => {
+    const hollow = input().pages.map((entry) =>
+      entry.page >= 2 && entry.page <= 4 ? { ...entry, data: { ...entry.data, rows: [] } } : entry,
+    );
+    expect(() => assembleSnapshot(input({ pages: hollow }))).toThrow(/page 4 has 0 rows/);
   });
 
   it("rejects ranks that do not match their page position", () => {

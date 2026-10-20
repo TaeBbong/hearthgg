@@ -33,6 +33,13 @@ export interface AssembleInput {
   pages: Array<{ page: number; data: LeaderboardPage }>;
 }
 
+/**
+ * Pages Blizzard may serve empty mid-board while its neighbours are fine (its own site
+ * fails on the same page, e.g. AP arena page 140 in October 2026). Their ranks are left
+ * out of the snapshot; more empty pages than this means the crawl itself went wrong.
+ */
+export const MAX_EMPTY_PAGES = 2;
+
 function growthTolerance(expected: number): number {
   return Math.max(PAGE_SIZE, Math.ceil(expected * 0.02));
 }
@@ -40,6 +47,7 @@ function growthTolerance(expected: number): number {
 export function assembleSnapshot({ board, seasonId, generatedAt, expectedTotalSize, pages }: AssembleInput): Snapshot {
   const ordered = pages.toSorted((a, b) => a.page - b.page);
   const rows: SnapshotRow[] = [];
+  let emptyPages = 0;
 
   ordered.forEach(({ page, data }, index) => {
     if (page !== index + 1) throw new SnapshotIntegrityError(`missing page ${index + 1}`);
@@ -48,6 +56,7 @@ export function assembleSnapshot({ board, seasonId, generatedAt, expectedTotalSi
     }
     const isLast = index === ordered.length - 1;
     if (!isLast && data.rows.length !== PAGE_SIZE) {
+      if (data.rows.length === 0 && ++emptyPages <= MAX_EMPTY_PAGES) return;
       throw new SnapshotIntegrityError(`page ${page} has ${data.rows.length} rows`);
     }
     data.rows.forEach((row, offset) => {
@@ -59,11 +68,13 @@ export function assembleSnapshot({ board, seasonId, generatedAt, expectedTotalSi
     });
   });
 
-  if (Math.abs(rows.length - expectedTotalSize) > growthTolerance(expectedTotalSize)) {
+  // Players on an empty page are still on the board.
+  const totalSize = rows.length + emptyPages * PAGE_SIZE;
+  if (Math.abs(totalSize - expectedTotalSize) > growthTolerance(expectedTotalSize)) {
     throw new SnapshotIntegrityError(`assembled ${rows.length} rows but the board reported ${expectedTotalSize}`);
   }
 
-  return { v: 1, ...board, seasonId, generatedAt, totalSize: rows.length, rows };
+  return { v: 1, ...board, seasonId, generatedAt, totalSize, rows };
 }
 
 export function snapshotKey({ region, mode, seasonId, generatedAt }: Snapshot): string {
