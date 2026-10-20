@@ -1,7 +1,8 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "rank",
-  "main": ".open-next/worker.js",
+  // Wraps .open-next/worker.js with rate limiting.
+  "main": "worker.ts",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "observability": { "enabled": true },
@@ -17,6 +18,12 @@
     { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "hearthgg-web-opennext-cache" },
     // Written by the crawler; read-only here.
     { "binding": "SNAPSHOTS", "bucket_name": "hearthgg-snapshots" }
+  ],
+  // Per client IP, counted per Cloudflare location (https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/).
+  // Pages are generous because each viewed board prefetches its player links.
+  "ratelimits": [
+    { "name": "SEARCH_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } },
+    { "name": "PAGE_RATE_LIMITER", "namespace_id": "1002", "simple": { "limit": 600, "period": 60 } }
   ],
   "d1_databases": [
     // Same database as the crawler (migrations live in /migrations and are applied from apps/crawler).
