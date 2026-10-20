@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { track } from "@/lib/analytics";
 
 const NOTICE_MS = 2_500;
 
@@ -22,9 +23,11 @@ export function ShareButton({ title, text }: { title: string; text: string }) {
   async function share() {
     const url = `${location.origin}${location.pathname}`;
     const data = { title, text, url };
+    const shared = (method: string) => track("share", { method, content_type: "player", item_id: location.pathname });
     if (navigator.share && navigator.canShare?.(data) !== false) {
       try {
         await navigator.share(data);
+        shared("share_sheet");
         return;
       } catch (error) {
         // Dismissing the sheet is not a failure; anything else falls back to copying.
@@ -33,6 +36,7 @@ export function ShareButton({ title, text }: { title: string; text: string }) {
     }
     try {
       await navigator.clipboard.writeText(url);
+      shared("clipboard");
       announce("링크를 복사했습니다");
     } catch {
       announce("복사하지 못했습니다. 주소창의 링크를 복사해 주세요");

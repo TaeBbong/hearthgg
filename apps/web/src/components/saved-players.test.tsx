@@ -1,12 +1,18 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { addRecent, readSaved, toggleFavorite } from "@/lib/saved-players";
 import { FavoriteButton, RecordVisit, SavedPlayers } from "./saved-players";
+
+const { track } = vi.hoisted(() => ({ track: vi.fn() }));
+vi.mock("@/lib/analytics", () => ({ track }));
 
 const sinah = { region: "AP", mode: "arena", name: "Sinah" } as const;
 const seasons = { "AP:arena": 56, "EU:standard": 156 };
 
-afterEach(() => localStorage.clear());
+afterEach(() => {
+  localStorage.clear();
+  track.mockReset();
+});
 
 describe("FavoriteButton", () => {
   it("adds and removes the player from favorites", () => {
@@ -18,6 +24,14 @@ describe("FavoriteButton", () => {
     expect(readSaved().favorites).toEqual([sinah]);
     fireEvent.click(button);
     expect(readSaved().favorites).toEqual([]);
+  });
+
+  it("reports adding a favorite, not removing one", () => {
+    render(<FavoriteButton player={sinah} />);
+    const button = screen.getByRole("button", { name: "즐겨찾기" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(track.mock.calls).toEqual([["add_favorite", { region: "AP", mode: "arena" }]]);
   });
 });
 

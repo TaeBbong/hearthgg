@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "개인정보처리방침" };
 
 export default function PrivacyPage() {
   return (
-    <LegalDocument title="개인정보처리방침" effectiveDate="2026년 10월 13일">
+    <LegalDocument title="개인정보처리방침" effectiveDate="2026년 10월 20일">
       <p>
         hearthgg(이하 &ldquo;서비스&rdquo;)는 「개인정보 보호법」에 따라 이용자의 개인정보를 보호하고 관련 고충을 원활하게 처리하기
         위해 다음과 같이 개인정보처리방침을 공개합니다. 서비스는 회원가입이 없으며, 이용자에게 이름, 이메일, 연락처 같은 정보를 받지
@@ -20,6 +20,11 @@ export default function PrivacyPage() {
             인프라에서 자동으로 생성되며, 서비스 제공, 장애 대응, 과도한 요청 같은 부정 이용 방지에만 사용합니다.
           </li>
           <li>
+            <b>이용 기록</b>: 방문한 페이지, 검색·공유·즐겨찾기 같은 기능 사용 내역, 브라우저와 기기 종류, 접속 국가·도시 수준의
+            위치, 방문자를 구분하는 쿠키 식별자. Google Analytics로 수집하며, 어떤 페이지와 기능이 쓰이는지 파악해 서비스를 개선하는
+            데에만 사용합니다. 누구인지 알아볼 수 있는 정보와 결합하지 않습니다.
+          </li>
+          <li>
             <b>리더보드 공개 정보</b>: Blizzard 공식 커뮤니티 리더보드에 공개된 플레이어 이름(배틀태그의 # 뒤 번호 제외), 순위,
             레이팅. 순위 검색과 순위 추이 제공에 사용하며, 다른 정보와 결합하지 않습니다.
           </li>
@@ -29,6 +34,7 @@ export default function PrivacyPage() {
       <LegalSection title="2. 보유 기간과 파기">
         <ul>
           <li>접속 기록: 생성 후 7일이 지나면 자동으로 삭제됩니다.</li>
+          <li>이용 기록: Google Analytics에 수집된 지 2개월이 지나면 자동으로 삭제됩니다. 이후에는 개인을 구분할 수 없는 집계 통계만 남습니다.</li>
           <li>
             리더보드 정보: 최신 순위는 다음 수집 때 새 데이터로 교체됩니다. 순위 추이를 위한 일별 기록은 서비스를 운영하는 동안
             보관하며, 삭제를 요청하면 지체 없이 파기합니다.
@@ -42,7 +48,7 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <LegalSection title="4. 처리 위탁과 국외 이전">
-        <p>서비스는 호스팅을 위해 다음과 같이 개인정보 처리를 위탁하며, 이에 따라 개인정보가 국외로 이전됩니다.</p>
+        <p>서비스는 다음과 같이 개인정보 처리를 위탁하며, 이에 따라 개인정보가 국외로 이전됩니다.</p>
         <ul>
           <li>받는 자: Cloudflare, Inc. (미국, privacyquestions@cloudflare.com)</li>
           <li>위탁 업무: 서비스 호스팅, 데이터 전송, 접속 기록 저장</li>
@@ -50,14 +56,33 @@ export default function PrivacyPage() {
           <li>이전 시기와 방법: 서비스에 접속할 때 네트워크를 통해 전송</li>
           <li>보유 기간: 7일</li>
         </ul>
-        <p>국외 이전을 원하지 않으면 서비스 이용을 중단하면 됩니다. 이 경우 접속 기록은 생성되지 않습니다.</p>
+        <ul>
+          <li>받는 자: Google LLC (미국, policies.google.com/privacy)</li>
+          <li>위탁 업무: 이용 통계 분석(Google Analytics)</li>
+          <li>이전 항목: 이용 기록(1항)</li>
+          <li>이전 시기와 방법: 페이지를 보거나 기능을 사용할 때 네트워크를 통해 전송</li>
+          <li>보유 기간: 2개월</li>
+        </ul>
+        <p>
+          접속 기록의 국외 이전을 원하지 않으면 서비스 이용을 중단하면 됩니다. 이용 기록은 5항의 방법으로 서비스를 계속 이용하면서도
+          거부할 수 있습니다.
+        </p>
       </LegalSection>
 
       <LegalSection title="5. 쿠키와 브라우저 저장소">
-        <p>
-          서비스는 쿠키를 사용하지 않으며, 분석 도구나 광고 도구도 사용하지 않습니다. 화면 테마(라이트/다크) 선택만 이용자의 브라우저
-          저장소(localStorage)에 저장합니다. 이 값은 서버로 전송되지 않으며 브라우저 설정에서 언제든 삭제할 수 있습니다.
-        </p>
+        <ul>
+          <li>
+            <b>쿠키</b>: Google Analytics가 방문자를 구분하려고 쿠키(<code>_ga</code>, <code>_ga_</code>로 시작하는 쿠키)를 저장합니다.
+            유효 기간은 최대 2년입니다. 브라우저 설정에서 쿠키를 차단하거나, Google의{" "}
+            <a href="https://tools.google.com/dlpage/gaoptout">Google Analytics 차단 부가기능</a>을 설치하면 수집을 거부할 수 있으며, 이
+            경우에도 서비스를 그대로 이용할 수 있습니다.
+          </li>
+          <li>
+            <b>브라우저 저장소</b>: 화면 테마(라이트/다크) 선택, 즐겨찾기와 최근 본 플레이어 목록을 이용자의 브라우저
+            저장소(localStorage)에 저장합니다. 이 값은 서버로 전송되지 않으며 브라우저 설정에서 언제든 삭제할 수 있습니다.
+          </li>
+          <li>서비스는 광고 도구를 사용하지 않습니다.</li>
+        </ul>
       </LegalSection>
 
       <LegalSection title="6. 정보주체의 권리와 행사 방법">
@@ -95,6 +120,13 @@ export default function PrivacyPage() {
 
       <LegalSection title="10. 처리방침의 변경">
         <p>이 처리방침을 바꿀 때는 시행일과 변경 내용을 이 페이지에 게시합니다.</p>
+        <ul>
+          <li>
+            2026년 10월 20일: Google Analytics 도입에 따라 이용 기록 수집(1항), 보유 기간(2항), Google LLC로의 처리 위탁과 국외
+            이전(4항), 쿠키 사용과 거부 방법(5항)을 추가하고, 브라우저 저장소에 즐겨찾기와 최근 본 플레이어를 저장한다는 내용을
+            보완했습니다. 이전 시행일은 2026년 10월 13일입니다.
+          </li>
+        </ul>
       </LegalSection>
     </LegalDocument>
   );

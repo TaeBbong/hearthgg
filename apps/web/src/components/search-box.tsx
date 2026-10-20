@@ -4,6 +4,7 @@ import type { SearchHit } from "@hearthgg/core/search";
 import Form from "next/form";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { track } from "@/lib/analytics";
 import { formatRating } from "@/lib/format";
 import { MODE_LABEL } from "@/lib/labels";
 import { playerHref } from "@/lib/routes";
@@ -58,6 +59,8 @@ export function SearchBox({ defaultValue = "", size = "lg" }: { defaultValue?: s
 
   function choose(hit: SearchHit) {
     close();
+    // Submitted searches land on /search?q=, which GA reports itself as view_search_results.
+    track("search", { search_term: value.trim() });
     router.push(playerHref(hit, hit.seasonId, hit.accountId));
   }
 

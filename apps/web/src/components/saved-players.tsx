@@ -3,6 +3,7 @@
 import { boardId, type BoardId } from "@hearthgg/core/domain";
 import Link from "next/link";
 import { useEffect, useSyncExternalStore } from "react";
+import { track } from "@/lib/analytics";
 import { playerHref, searchHref } from "@/lib/routes";
 import {
   EMPTY_SAVED,
@@ -29,7 +30,10 @@ export function FavoriteButton({ player }: { player: SavedPlayer }) {
     <button
       type="button"
       aria-pressed={on}
-      onClick={() => toggleFavorite(player)}
+      onClick={() => {
+        if (!on) track("add_favorite", { region: player.region, mode: player.mode });
+        toggleFavorite(player);
+      }}
       className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[12px] font-semibold ${
         on ? "border-rank-1 text-rank-1" : "border-border text-muted hover:text-foreground"
       }`}

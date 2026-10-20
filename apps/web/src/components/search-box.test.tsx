@@ -5,6 +5,8 @@ import { SearchBox } from "./search-box";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+const { track } = vi.hoisted(() => ({ track: vi.fn() }));
+vi.mock("@/lib/analytics", () => ({ track }));
 vi.mock("next/form", () => ({
   default: ({ action, children, ...props }: React.ComponentProps<"form"> & { action: string }) => (
     <form action={action} {...props}>
@@ -70,6 +72,7 @@ describe("SearchBox", () => {
 
     await user.keyboard("{Enter}");
     expect(push).toHaveBeenCalledWith("/eu/standard/156/sinahfan");
+    expect(track).toHaveBeenCalledWith("search", { search_term: "sin" });
   });
 
   it("closes suggestions on Escape", async () => {
