@@ -6,6 +6,13 @@
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "observability": { "enabled": true },
+  // hsgg.dev serves the site; www and the workers.dev address redirect to it (src/lib/canonical-host.ts).
+  "routes": [
+    { "pattern": "hsgg.dev", "custom_domain": true },
+    { "pattern": "www.hsgg.dev", "custom_domain": true }
+  ],
+  // Wrangler turns workers.dev off once routes exist; keep it so links already shared still redirect.
+  "workers_dev": true,
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"

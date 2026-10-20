@@ -14,12 +14,12 @@ const REGIONS = "아시아·태평양 · 아메리카 · 유럽";
 export default async function SiteImage() {
   return new ImageResponse(
     (
-      <OgCard eyebrow="rank.hsgg.workers.dev">
+      <OgCard eyebrow="hsgg.dev">
         <div style={{ display: "flex", fontSize: 68, fontWeight: 700 }}>{TITLE}</div>
         <div style={{ display: "flex", marginTop: 28, fontSize: 38, color: OG_COLORS.muted }}>{BODY}</div>
         <div style={{ display: "flex", marginTop: 8, fontSize: 38, color: OG_COLORS.muted }}>{REGIONS}</div>
       </OgCard>
     ),
-    { ...size, fonts: await ogFonts([TITLE, BODY, REGIONS, "hearthgg rank.hsgg.workers.dev"].join("")) },
+    { ...size, fonts: await ogFonts([TITLE, BODY, REGIONS, "hearthgg hsgg.dev"].join("")) },
   );
 }
