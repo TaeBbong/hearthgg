@@ -78,6 +78,13 @@ test.describe("player", () => {
     await page.goto("/ap/arena/56/nobody-here");
     await expect(page.getByText(/리더보드에서 찾을 수 없습니다/)).toBeVisible();
   });
+
+  test("names longer than any BattleTag get neither a page nor a share image", async ({ page, request }) => {
+    const name = "a".repeat(40);
+    expect((await request.get(`/ap/arena/56/${name}/opengraph-image`)).status()).toBe(404);
+    await page.goto(`/ap/arena/56/${name}`);
+    await expect(page.getByText("페이지를 찾을 수 없습니다")).toBeVisible();
+  });
 });
 
 test("theme choice persists across reloads", async ({ page }) => {
