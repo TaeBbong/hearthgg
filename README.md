@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://rank.hsgg.workers.dev"><b>hearthgg 바로가기 →</b></a>
+  <a href="https://hsgg.dev"><b>hearthgg 바로가기 →</b></a>
 </p>
 
 <p align="center">
